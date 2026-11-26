@@ -104,8 +104,12 @@ begin
 end;
 $$;
 
--- New customer bookings must use the server quote and submission contract.
-drop policy "Customers create own service requests" on public.service_requests;
+-- Preserve the existing policies and restrict direct inserts to administrators.
+-- Customer inserts run through the quote-verifying function below.
+create policy "Direct request inserts require administrator" on public.service_requests
+  as restrictive for insert to authenticated with check (
+    exists (select 1 from public.user_profiles where id=(select auth.uid()) and role='admin')
+  );
 
 create function nexroad_private.create_priced_booking(p_request_id uuid,p_input jsonb,p_expected_quote jsonb)
 returns uuid language plpgsql security definer set search_path=''
