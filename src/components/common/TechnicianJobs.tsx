@@ -37,9 +37,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
           .select('id, request_status, service_location, latitude, longitude, issue_description, service_categories(slug, name)')
           .eq('assigned_technician_id', technicianId).in('request_status', Object.keys(jobSteps))
           .abortSignal(signal),
-        supabase.from('request_offers').select('id, estimated_distance_km, expires_at')
-          .eq('technician_id', technicianId).eq('offer_status', 'offered')
-          .gt('expires_at', new Date().toISOString()).order('expires_at').abortSignal(signal),
+        supabase.rpc('technician_matching_offers').abortSignal(signal),
         supabase.rpc('technician_performance').abortSignal(signal).single(),
       ])
       if (jobs.error) throw jobs.error
@@ -47,6 +45,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
       if (metrics.error) throw metrics.error
       return { jobs: jobs.data, offers: offers.data, metrics: metrics.data }
     },
+    refetchInterval: 15000,
   })
   const change = useMutation({
     mutationFn: async (action: Action) => {
@@ -90,7 +89,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
             {data.data.offers.length === 0 && <p className="text-sm text-slate-600">No open offers.</p>}
             {data.data.offers.map((offer) => (
               <div key={offer.id} className="space-y-3 rounded-xl border border-slate-200 p-4">
-                <h3 className="font-bold text-brand-navy">Roadside assistance offer</h3>
+                <h3 className="font-bold text-brand-navy">{offer.service} offer</h3>
                 <p className="text-sm text-slate-600">Expires at {time.format(new Date(offer.expires_at))}
                   {offer.estimated_distance_km !== null && ` · ${offer.estimated_distance_km} km estimated approach`}
                 </p>

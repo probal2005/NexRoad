@@ -51,6 +51,7 @@ export default function CustomerRequests({ customerId, categories }: {
       if (history.error) throw history.error
       return { current: current.data, history: history.data }
     },
+    refetchInterval: (query) => query.state.data?.current.length ? 15000 : false,
   })
 
   const updates = useQuery({
@@ -77,6 +78,16 @@ export default function CustomerRequests({ customerId, categories }: {
       else setCancellationNotice('This request is no longer eligible for cancellation.')
     },
     onError: () => setPendingCancellation(null),
+  })
+
+  const retryMatching = useMutation({
+    mutationFn: async (requestId: string) => {
+      const { data, error } = await supabase.rpc('retry_customer_matching', { p_request_id: requestId })
+      if (error) throw error
+      if (!data) throw new Error('Request unavailable')
+      return data
+    },
+    onSettled: () => Promise.all([requests.refetch(), updates.refetch()]),
   })
 
   const sections = [
@@ -114,6 +125,9 @@ export default function CustomerRequests({ customerId, categories }: {
             )}
           </div>
           {id === 'active-requests' && requests.isError && <Alert variant="error" title="Could not load your requests." />}
+          {id === 'active-requests' && retryMatching.isError && <Alert variant="error" title="Could not retry matching." />}
+          {id === 'active-requests' && retryMatching.isSuccess && retryMatching.data === 'requested'
+            && <Alert title="No eligible technicians are available yet.">NexRoad will keep looking during the request window.</Alert>}
           {id === 'active-requests' && cancel.isError && <Alert variant="error" title="Could not cancel your request. Please try again." />}
           {id === 'active-requests' && cancellationNotice && <Alert title={cancellationNotice} />}
           {requests.isPending && <p className="mt-4 text-slate-600" role="status">Loading requests…</p>}
@@ -135,6 +149,13 @@ export default function CustomerRequests({ customerId, categories }: {
                       <p className="text-sm text-slate-600">
                         Payment <span className="capitalize">{request.payment_method} · {request.payment_status}</span>
                       </p>
+                      {request.request_status === 'requested' && (
+                        <div className="space-y-2">
+                          <p className="text-sm text-slate-600">Waiting for an eligible technician nearby.</p>
+                          <Button size="sm" variant="outline" disabled={retryMatching.isPending || cancel.isPending}
+                            onClick={() => retryMatching.mutate(request.id)}>Retry matching</Button>
+                        </div>
+                      )}
                       {cancellable.includes(request.request_status) && (
                         <Button variant="outline" size="sm" onClick={() => {
                           cancel.reset()

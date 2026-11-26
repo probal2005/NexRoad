@@ -445,6 +445,14 @@ export type Database = {
       }
     }
     Functions: {
+      retry_customer_matching: {
+        Args: { p_request_id: string }
+        Returns: string | null
+      }
+      technician_matching_offers: {
+        Args: Record<never, never>
+        Returns: { id: string; service: string; estimated_distance_km: number | null; expires_at: string }[]
+      }
       account_access_allowed: { Args: Record<never, never>; Returns: boolean }
       admin_overview: { Args: Record<never, never>; Returns: Json }
       admin_update: {

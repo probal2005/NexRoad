@@ -14,7 +14,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 6 | Customer dashboard implemented and tested locally. The production snapshot has the initial dashboard. Local additions cover vehicle editing and removal, map pickup, active request details and history, pre-acceptance cancellation, customer settings, service-specific inputs, indicative rates and confirmation, request updates, technician names and completed-request feedback. Hosted migration approval and live verification remain pending. |
 | 7 | Technician dashboard implemented locally, including approval status, availability, service rates, opt-in one-time location sharing, offer responses, job progress and directions, mechanical outcomes, ratings and simulated earnings. Offer generation belongs to Phase 9. Hosted workflow depends on approved migrations. |
 | 8 | Admin Dashboard implemented. Includes application review, app suspension/reactivation, category and rate defaults, booking and simulated payment monitoring, a consent-based technician map, complaint handling, analytics, audit history and platform settings. Hosted verification requires approved migrations. |
-| 9–15 | Pending. |
+| 9 | Booking matching implemented with ranked offers, expiry, retry, privacy and concurrency checks. The production worker uses Supabase Cron. |
+| 10–15 | Pending. |
 
 ## Verification
 
@@ -31,7 +32,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 - Phase 7 rate setup passed Chromium tests with simulated Supabase responses for viewing, listing and unlisting services, failed-save retry and reload. Disposable PostgreSQL verified that approved technicians can update their own rates and that cross-account and customer writes are rejected.
 - Phase 7 workflow passed Chromium checks with simulated Supabase responses for GPS consent, rate setup, offer responses, navigation, mechanical completion and earnings display. Disposable PostgreSQL verified ownership and role checks, location bounds, offer decline, transition ordering, mechanical outcomes and private performance totals.
 - Phase 8 fresh PostgreSQL replay applied all five migrations and verified customer request creation, approval role changes, non-admin denial, suspension and reactivation, complaint ownership and resolution, pricing and settings changes, and the audit trail. Chromium verified the admin and suspension workflows using simulated Supabase responses.
-- Remote migrations were not applied, and post-migration live tests and advisors were not run.
+- The first five reviewed migrations were applied to live Supabase. A rollback-only smoke test verified customer request creation, activity, cancellation, technician isolation and admin overview. Supabase assigned different ledger timestamps from the repository filenames.
+- Phase 9 local PostgreSQL verified ranking, category and eligibility filters, five-offer limit, progress to the next eligible technician, timeout, cancellation, and both acceptance races. Chromium checked customer retry feedback and the technician offer workflow with simulated Supabase responses.
 
 ## Next steps
 
@@ -39,3 +41,7 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 2. Review the full SQL before remote application. Recheck the data preflight immediately before any approved application. Verify the installed history triggers and rerun the security advisor afterward.
 3. Regenerate database types after approved migration changes. Use dedicated live test accounts to verify the customer, technician and admin flows. Rotate any demo account passwords that matched values in the original public source.
 4. Review the live Auth advisor for disabled leaked-password protection as a separate project setting. [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+
+## Phase 9 operation
+
+New requests dispatch immediately. The matching worker runs once a minute. It offers each booking to up to five nearest eligible technicians at a time, with a 90-second offer and a 15-minute total request window. A technician is offered each booking at most once. Distance is straight-line approach distance, and eligibility uses the configured platform radius and a location up to ten minutes old. Reconcile hosted migration ledger versions before using `supabase db push`.
