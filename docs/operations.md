@@ -6,7 +6,7 @@ Production runs as a Vite SPA on Vercel with Supabase Auth, Postgres, Realtime a
 
 Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in the appropriate Vercel environment. If the Supabase hostname changes, update the HTTPS and WebSocket origins in the Content Security Policy in `vercel.json` before deploying. Review the canonical origin and sitemap if the public site hostname changes.
 
-A dedicated local demo can use the `VITE_LOCAL_DEMO_CUSTOMER_PASSWORD`, `VITE_LOCAL_DEMO_TECHNICIAN_PASSWORD` and `VITE_LOCAL_DEMO_ADMIN_PASSWORD` values in an ignored `.env.development.local` file. Use credentials created only for that local instance. Keep the local server on loopback. The production demo uses sample data and needs no login credentials.
+Hosted demo accounts use the standard sign-in form and production roles. Assign passwords privately through authorized account management and keep admin access restricted to authorized operators.
 
 ## Database changes
 

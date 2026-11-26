@@ -1,6 +1,6 @@
 # NexRoad
 
-NexRoad is a roadside-assistance simulation for Chandigarh. It models fuel delivery, mechanical assistance and towing, from a customer request through technician matching, service completion, chat and simulated payment. The production login page offers password-free previews for customer, technician and admin roles. [Open NexRoad](https://nexroad.vercel.app)
+NexRoad is a roadside-assistance simulation for Chandigarh. It models fuel delivery, mechanical assistance and towing, from a customer request through technician matching, service completion, chat and simulated payment. The sign-in page supports assigned customer, technician and admin demo accounts. [Open NexRoad](https://nexroad.vercel.app)
 
 ## Development setup
 

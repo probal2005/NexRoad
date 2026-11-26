@@ -4,7 +4,9 @@ NexRoad simulates roadside assistance. It does not dispatch real responders or m
 
 ## Try the demo
 
-On the sign-in page, open a customer, technician or admin preview from the demo section. Each preview has a sample action and a **Reset sample** button. You can change role from the preview navigation. No password or account is required, and preview actions stay in the browser.
+On the sign-in page, enter the assigned email and password. Use the Copy button next to either field to copy its current value. Supabase determines which full dashboard opens. These accounts use the same hosted NexRoad project and can change data according to their normal permissions. Use the admin account only with authorized operators.
+
+The public [sample preview](https://nexroad.vercel.app/demo/customer) is also available by direct link and stays in the browser.
 
 ## Customer
 

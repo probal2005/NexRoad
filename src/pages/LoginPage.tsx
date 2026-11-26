@@ -8,9 +8,6 @@ import {
   EyeOff,
   LockKeyhole,
   Mail,
-  UserRound,
-  Wrench,
-  ShieldCheck,
 } from 'lucide-react'
 
 import AuthLayout from '../components/auth/AuthLayout'
@@ -29,51 +26,15 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
-const loopbackHosts = ['localhost', '127.0.0.1', '[::1]']
-const localDemoPasswords = import.meta.env.DEV
-  && loopbackHosts.includes(window.location.hostname)
-  && loopbackHosts.includes(new URL(import.meta.env.VITE_SUPABASE_URL).hostname)
-  ? {
-    user: import.meta.env.VITE_LOCAL_DEMO_CUSTOMER_PASSWORD as string | undefined,
-    technician: import.meta.env.VITE_LOCAL_DEMO_TECHNICIAN_PASSWORD as string | undefined,
-    admin: import.meta.env.VITE_LOCAL_DEMO_ADMIN_PASSWORD as string | undefined,
-  }
-  : null
-
-const demoAccounts = [
-  {
-    role: 'user',
-    label: 'Demo Customer',
-    description: 'Test the customer experience',
-    email: 'demo.user@example.com',
-    icon: UserRound,
-  },
-  {
-    role: 'technician',
-    label: 'Demo Technician',
-    description: 'Test the technician dashboard',
-    email: 'demo.technician@example.com',
-    icon: Wrench,
-  },
-  {
-    role: 'admin',
-    label: 'Demo Admin',
-    description: 'Test administration features',
-    email: 'demo.admin@example.com',
-    icon: ShieldCheck,
-  },
-] as const
-
 export default function LoginPage() {
   const { user, role, profileLoading, loading: authLoading } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
+  const [copyStatus, setCopyStatus] = useState('')
 
   const {
     register,
     handleSubmit,
     setError,
-    clearErrors,
-    setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
     resolver: zodResolver(loginSchema),
@@ -83,13 +44,20 @@ export default function LoginPage() {
     },
   })
 
-  function selectDemoAccount(account: (typeof demoAccounts)[number]) {
-    const password = localDemoPasswords?.[account.role] ?? ''
-    clearErrors('root.server')
-    clearErrors('password')
-    setValue('email', account.email, { shouldValidate: true })
-    setValue('password', password, { shouldDirty: true })
-    setShowPassword(Boolean(password))
+  async function copyField(form: HTMLFormElement | null, field: keyof LoginFormValues) {
+    const label = field === 'email' ? 'Email address' : 'Password'
+    const value = form && new FormData(form).get(field)
+    if (typeof value !== 'string' || !value) {
+      setCopyStatus(`Enter your ${label.toLowerCase()} first.`)
+      return
+    }
+
+    try {
+      await navigator.clipboard.writeText(value)
+      setCopyStatus(`${label} copied.`)
+    } catch {
+      setCopyStatus('Clipboard access is unavailable. Select the text and copy it manually.')
+    }
   }
 
   if (authLoading || profileLoading) {
@@ -141,10 +109,10 @@ export default function LoginPage() {
       footerLinkText="Create an account"
       footerTo="/register"
     >
-      <div className="space-y-5">
-        <Card padding="lg" className="shadow-xl shadow-slate-900/[0.04]">
-          <form onSubmit={handleSubmit(onSubmit)} noValidate>
-            <div className="space-y-5">
+      <Card padding="lg" className="shadow-xl shadow-slate-900/[0.04]">
+        <form onSubmit={handleSubmit(onSubmit)} noValidate>
+          <div className="space-y-5">
+            <div className="relative">
               <Input
                 label="Email address"
                 type="email"
@@ -152,111 +120,73 @@ export default function LoginPage() {
                 autoComplete="email"
                 leftIcon={<Mail size={17} />}
                 error={errors.email?.message}
+                className="pr-20"
                 required
                 {...register('email')}
               />
-
-              <div className="relative">
-                <Input
-                  label="Password"
-                  type={showPassword ? 'text' : 'password'}
-                  placeholder="Enter your password"
-                  autoComplete="current-password"
-                  leftIcon={<LockKeyhole size={17} />}
-                  error={errors.password?.message}
-                  className="pr-12"
-                  required
-                  {...register('password')}
-                />
-                <button
-                  type="button"
-                  onClick={() => setShowPassword((current) => !current)}
-                  aria-label={showPassword ? 'Hide password' : 'Show password'}
-                  className="absolute right-3 top-[43px] rounded-md p-1 text-slate-400 hover:text-brand-navy"
-                >
-                  {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
-                </button>
-              </div>
+              <button
+                type="button"
+                aria-label="Copy email address"
+                onClick={(event) => void copyField(event.currentTarget.form, 'email')}
+                className="absolute right-2 top-8 min-h-9 rounded-lg px-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2"
+              >
+                Copy
+              </button>
             </div>
 
-            {errors.root?.server?.message && (
-              <div
-                role="alert"
-                className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
+            <div className="relative">
+              <Input
+                label="Password"
+                type={showPassword ? 'text' : 'password'}
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                leftIcon={<LockKeyhole size={17} />}
+                error={errors.password?.message}
+                className="pr-28"
+                required
+                {...register('password')}
+              />
+              <button
+                type="button"
+                onClick={() => setShowPassword((current) => !current)}
+                aria-label={showPassword ? 'Hide password' : 'Show password'}
+                className="absolute right-14 top-8 flex min-h-9 items-center rounded-md px-2 text-slate-600 hover:text-brand-navy focus-visible:outline-2"
               >
-                {errors.root.server.message}
-              </div>
-            )}
+                {showPassword ? <EyeOff size={18} /> : <Eye size={18} />}
+              </button>
+              <button
+                type="button"
+                aria-label="Copy password"
+                onClick={(event) => void copyField(event.currentTarget.form, 'password')}
+                className="absolute right-2 top-8 min-h-9 rounded-lg px-2 text-sm font-semibold text-emerald-800 hover:bg-emerald-50 focus-visible:outline-2"
+              >
+                Copy
+              </button>
+            </div>
+          </div>
 
-            <Button
-              type="submit"
-              fullWidth
-              size="lg"
-              loading={isSubmitting}
-              className="mt-7"
+          <p role="status" className="mt-2 min-h-5 text-sm text-slate-700">{copyStatus}</p>
+
+          {errors.root?.server?.message && (
+            <div
+              role="alert"
+              className="mt-5 rounded-xl border border-red-200 bg-red-50 p-3 text-sm text-red-700"
             >
-              Sign in
-            </Button>
-          </form>
-        </Card>
+              {errors.root.server.message}
+            </div>
+          )}
 
-        <Card padding="lg" className="border border-emerald-100 bg-emerald-50/40">
-          <div className="mb-4">
-            <p className="text-sm font-bold text-brand-navy">
-              Try NexRoad Demo
-            </p>
-            <p className="mt-1 text-xs leading-5 text-slate-500">
-              Try a role with sample data. No sign-in is required.
-            </p>
-          </div>
-
-          <div className="space-y-3">
-            {demoAccounts.map((account) => {
-              const Icon = account.icon
-              const fillsPassword = Boolean(localDemoPasswords?.[account.role])
-
-              return (
-                <div
-                  key={account.email}
-                  className="flex items-center justify-between gap-3 rounded-xl border border-slate-200 bg-white p-3"
-                >
-                  <div className="flex min-w-0 items-center gap-3">
-                    <div className="rounded-lg bg-emerald-50 p-2 text-emerald-700">
-                      <Icon size={18} />
-                    </div>
-                    <div className="min-w-0">
-                      <p className="text-sm font-semibold text-brand-navy">
-                        {account.label}
-                      </p>
-                      <p className="text-xs text-slate-500">
-                        {account.description}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="flex shrink-0 flex-col items-end gap-2">
-                    <Link
-                      to={`/demo/${account.role === 'user' ? 'customer' : account.role}`}
-                      aria-label={`Open ${account.label}`}
-                      className="rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
-                    >
-                      Open demo
-                    </Link>
-                    {fillsPassword && (
-                      <button type="button" onClick={() => selectDemoAccount(account)}
-                        aria-label={`Fill local sign-in for ${account.label}`}
-                        className="text-xs font-semibold text-emerald-800 hover:underline">
-                        Fill local sign-in
-                      </button>
-                    )}
-                  </div>
-                </div>
-              )
-            })}
-          </div>
-
-        </Card>
-      </div>
+          <Button
+            type="submit"
+            fullWidth
+            size="lg"
+            loading={isSubmitting}
+            className="mt-7"
+          >
+            Sign in
+          </Button>
+        </form>
+      </Card>
 
       <p className="mt-5 text-center text-xs text-slate-600">
         Need help?{' '}

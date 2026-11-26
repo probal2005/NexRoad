@@ -13,8 +13,7 @@ test("Demo preserves role isolation and avoids backend writes", async ({ page, b
     ['Technician', 'Accept sample offer', 'Offer accepted'],
     ['Admin', 'Approve sample application', 'Application approved'],
   ]) {
-    await page.goto(base + '/login')
-    await page.getByRole('link',{name:'Open Demo ' + role}).click()
+    await page.goto(base + '/demo/' + role.toLowerCase())
     await page.waitForURL(base + '/demo/' + role.toLowerCase())
     await page.getByRole('heading',{name:role + ' demo'}).waitFor()
     await page.getByRole('button',{name:action}).click()
