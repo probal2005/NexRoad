@@ -1,6 +1,6 @@
 # NexRoad project progress
 
-Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the uploaded NexRoad source at GitHub commit `5dd7183`. The connected checkout is separate from the original VS Code workspace.
+Phase 14 reviewed 26 November 2026. The Phase 5 review below records the initial audit. Work continued from the uploaded NexRoad source at GitHub commit `5dd7183`. The connected checkout is separate from the original VS Code workspace.
 
 | Step | Status |
 | --- | --- |
@@ -19,7 +19,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 11 | Service workflows implemented for fuel delivery, mechanical diagnosis and towing. Includes simulated travel, job reports, customer confirmation, linked towing, feedback and a per-booking timeline. |
 | 12 | Private Supabase Realtime subscriptions, booking and offer updates, consent-based location, admin monitoring, reconnect recovery and polling fallback implemented. |
 | 13 | Simulated cash and online checkout, failure and retry, payment history and text receipts, participant-only realtime chat, unread counts and paid earnings implemented. |
-| 14–15 | Pending. |
+| 14 | Testing, security and optimization implemented. See the verification summary below. |
+| 15 | Pending. |
 
 ## Verification
 
@@ -39,7 +40,7 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 - The first five reviewed migrations were applied to live Supabase. A rollback-only smoke test verified customer request creation, activity, cancellation, technician isolation and admin overview. Supabase assigned different ledger timestamps from the repository filenames.
 - Phase 9 local PostgreSQL verified ranking, category and eligibility filters, five-offer limit, progress to the next eligible technician, timeout, cancellation, and both acceptance races. Chromium checked customer retry feedback and the technician offer workflow with simulated Supabase responses.
 
-## Next steps
+## Initial Phase 5 follow-up
 
 1. Compare the original Step 5.7 SQL, if available, with the review migration and check that the private schema is excluded from Data API exposure.
 2. Review the full SQL before remote application. Recheck the data preflight immediately before any approved application. Verify the installed history triggers and rerun the security advisor afterward.
@@ -73,3 +74,13 @@ Local PostgreSQL verified channel topics, blocking client-generated broadcasts, 
 Customers choose a simulated payment method during booking and can record payment after confirming service. The server uses the immutable final booking charge, preserves failed attempts and accepts only one successful payment. Receipt downloads are text files, and no payment details are requested. Technician earnings use confirmed simulated payments. Active and completed bookings support private chat between the customer and assigned technician, with timestamps, paginated messages and unread counts. Broadcasts carry refresh hints without message text.
 
 PostgreSQL checks verified role access, sender roles, retries, unread tracking, exact amounts, payment privacy, earnings and concurrent payment attempts. Chromium verified the customer chat, unread clearing, failed-message retry, online payment retry and downloaded receipt using simulated Supabase responses.
+
+
+## Phase 14 verification
+
+- Added browser and database regression suites plus unit tests for INR pricing and browser configuration. See `tests/README.md` for the commands and fixture boundaries.
+- Split dashboard and secondary routes into lazy chunks, added a page error recovery screen, and added public metadata, a sitemap and private-route indexing controls. Improved confirmation dialog focus and keyboard behavior, fixed nested navigation links, and increased login and footer contrast.
+- Added browser security headers and a build-time Supabase key check. The production content security policy allows the NexRoad Supabase HTTPS and WebSocket endpoints and OpenStreetMap tiles.
+- Disposable PostgreSQL 17 replay passed, including simultaneous acceptance of one booking and overlapping acceptances by one technician. The live Supabase migration is recorded as `20261126145449`. The live payment, private chat, unread state, broadcast and earnings checks passed in a rolled-back transaction.
+- Supabase performance advisor no longer flags unindexed foreign keys. It still reports role-specific permissive policy and unused-index notices. The security advisor reports disabled leaked-password protection, a Supabase Pro or higher feature. Dedicated live account sign-in is still pending. [Supabase password security](https://supabase.com/docs/guides/auth/password-security#password-strength-and-leaked-password-protection)
+- Local lint, TypeScript, production build, five unit checks and nine Chromium scenarios passed. The scenarios cover all three sign-in roles with fixtures, mobile layout and metadata, login accessibility, admin keyboard navigation, demo isolation, realtime reconnect, chat and payment retry. The npm dependency audit reported zero vulnerabilities.

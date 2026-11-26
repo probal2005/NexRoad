@@ -1,18 +1,15 @@
 import { createClient } from '@supabase/supabase-js'
 import type { Database } from './database.types'
+import { validatePublicSupabaseConfig } from './publicSupabaseConfig'
 
-const supabaseUrl = import.meta.env.VITE_SUPABASE_URL
-const supabasePublishableKey = import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY
-
-if (!supabaseUrl || !supabasePublishableKey) {
-  throw new Error(
-    'Supabase configuration missing. Check your .env.local file.',
-  )
-}
+const config = validatePublicSupabaseConfig(
+  import.meta.env.VITE_SUPABASE_URL,
+  import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+)
 
 export const supabase = createClient<Database>(
-  supabaseUrl,
-  supabasePublishableKey,
+  config.url,
+  config.key,
   {
     auth: {
       autoRefreshToken: true,

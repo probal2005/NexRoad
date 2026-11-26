@@ -1,4 +1,4 @@
-import { useEffect, useId, useRef, type ReactNode } from 'react'
+import { useLayoutEffect, useId, useRef, type ReactNode } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import Button from './Button'
 
@@ -28,98 +28,88 @@ export default function ConfirmDialog({
   onClose,
 }: ConfirmDialogProps) {
   const id = useId()
-  const dialogRef = useRef<HTMLDivElement>(null)
+  const dialogRef = useRef<HTMLDialogElement>(null)
 
-  useEffect(() => {
-    if (!open) return
-
-    const previousFocus = document.activeElement as HTMLElement | null
-
-    const handleKeyDown = (event: KeyboardEvent) => {
-      if (event.key === 'Escape' && !loading) {
-        onClose()
-      }
-    }
-
-    document.addEventListener('keydown', handleKeyDown)
-    dialogRef.current?.focus()
-
+  useLayoutEffect(() => {
+    const dialog = dialogRef.current
+    if (!open || !dialog) return
+    const previousFocus = document.activeElement
+    dialog.showModal()
     return () => {
-      document.removeEventListener('keydown', handleKeyDown)
-      previousFocus?.focus()
+      dialog.close()
+      if (previousFocus instanceof HTMLElement && previousFocus.isConnected) previousFocus.focus()
     }
-  }, [open, loading, onClose])
+  }, [open])
 
   if (!open) return null
 
   return (
-    <div
-      className="fixed inset-0 z-[100] flex items-center justify-center bg-slate-950/50 p-4 backdrop-blur-sm"
-      onMouseDown={(event) => {
-        if (event.target === event.currentTarget && !loading) {
-          onClose()
-        }
+    <dialog
+      ref={dialogRef}
+      role="alertdialog"
+      aria-modal="true"
+      aria-labelledby={`${id}-title`}
+      aria-describedby={`${id}-description`}
+      onCancel={(event) => {
+        event.preventDefault()
+        if (!loading) onClose()
       }}
+      onClick={(event) => {
+        if (loading || event.target !== event.currentTarget) return
+        const { left, right, top, bottom } = event.currentTarget.getBoundingClientRect()
+        if (event.clientX < left || event.clientX > right || event.clientY < top || event.clientY > bottom) onClose()
+      }}
+      className="fixed inset-0 m-auto max-h-[calc(100dvh-2rem)] w-[92vw] max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl backdrop:bg-slate-950/50 backdrop:backdrop-blur-sm"
     >
-      <div
-        ref={dialogRef}
-        role="alertdialog"
-        aria-modal="true"
-        aria-labelledby={`${id}-title`}
-        aria-describedby={`${id}-description`}
-        tabIndex={-1}
-        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
-      >
-        <div className="flex items-start justify-between">
-          <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
-            <AlertTriangle size={24} />
-          </div>
-
-          <button
-            type="button"
-            aria-label="Close dialog"
-            disabled={loading}
-            onClick={onClose}
-            className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
-          >
-            <X size={19} />
-          </button>
+      <div className="flex items-start justify-between">
+        <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
+          <AlertTriangle size={24} />
         </div>
 
-        <h2
-          id={`${id}-title`}
-          className="mt-5 text-xl font-extrabold text-brand-navy"
+        <button
+          type="button"
+          aria-label="Close dialog"
+          disabled={loading}
+          onClick={onClose}
+          className="rounded-lg p-2 text-slate-400 transition hover:bg-slate-100 hover:text-slate-700 disabled:opacity-50"
         >
-          {title}
-        </h2>
-
-        <p
-          id={`${id}-description`}
-          className="mt-3 text-sm leading-7 text-slate-600"
-        >
-          {description}
-        </p>
-
-        {children && <div className="mt-4">{children}</div>}
-
-        <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
-          <Button
-            variant="outline"
-            disabled={loading}
-            onClick={onClose}
-          >
-            {cancelLabel}
-          </Button>
-
-          <Button
-            variant={variant === 'danger' ? 'danger' : 'primary'}
-            loading={loading}
-            onClick={onConfirm}
-          >
-            {confirmLabel}
-          </Button>
-        </div>
+          <X size={19} />
+        </button>
       </div>
-    </div>
+
+      <h2
+        id={`${id}-title`}
+        className="mt-5 text-xl font-extrabold text-brand-navy"
+      >
+        {title}
+      </h2>
+
+      <p
+        id={`${id}-description`}
+        className="mt-3 text-sm leading-7 text-slate-600"
+      >
+        {description}
+      </p>
+
+      {children && <div className="mt-4">{children}</div>}
+
+      <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
+        <Button
+          variant="outline"
+          disabled={loading}
+          onClick={onClose}
+        >
+          {cancelLabel}
+        </Button>
+
+        <Button
+          variant={variant === 'danger' ? 'danger' : 'primary'}
+          loading={loading}
+          onClick={onConfirm}
+        >
+          {confirmLabel}
+        </Button>
+      </div>
+    </dialog>
   )
 }

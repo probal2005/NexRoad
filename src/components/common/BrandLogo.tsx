@@ -1,11 +1,14 @@
-import type { HTMLAttributes } from 'react'
+import type { MouseEventHandler } from 'react'
+import { Link } from 'react-router-dom'
 
 type BrandLogoProps = {
   size?: 'sm' | 'md' | 'lg'
   showTagline?: boolean
   dark?: boolean
   href?: string
-} & Omit<HTMLAttributes<HTMLDivElement>, 'children'>
+  onClick?: MouseEventHandler<HTMLAnchorElement>
+  className?: string
+}
 
 const logoSizes = {
   sm: 'h-9 w-9',
@@ -19,11 +22,12 @@ export default function BrandLogo({
   dark = false,
   href = '/',
   className = '',
-  ...props
+  onClick
 }: BrandLogoProps) {
   return (
-    <a
-      href={href}
+    <Link
+      to={href}
+      onClick={onClick}
       aria-label="NexRoad home"
       className={[
         'inline-flex items-center gap-3',
@@ -36,7 +40,7 @@ export default function BrandLogo({
         className={logoSizes[size]}
       />
 
-      <div {...props}>
+      <div>
         <span
           className={[
             'block text-xl leading-tight font-extrabold tracking-tight',
@@ -57,6 +61,6 @@ export default function BrandLogo({
           </span>
         )}
       </div>
-    </a>
+    </Link>
   )
 }

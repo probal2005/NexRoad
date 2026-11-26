@@ -52,9 +52,7 @@ export default function PublicNavbar() {
           aria-label="Main navigation"
           className="mx-auto flex min-h-[76px] max-w-7xl items-center justify-between gap-4 px-5 sm:px-6 lg:px-8"
         >
-          <Link to="/" onClick={closeMobileMenu} className="shrink-0">
-            <BrandLogo size="md" />
-          </Link>
+          <BrandLogo size="md" onClick={closeMobileMenu} className="shrink-0" />
 
           <div className="hidden items-center gap-6 lg:flex">
             {navigationLinks.map((link) => (

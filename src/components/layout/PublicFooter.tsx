@@ -61,7 +61,7 @@ export default function PublicFooter() {
           ))}
         </div>
 
-        <div className="mt-8 flex flex-col justify-between gap-3 border-t border-white/10 pt-5 text-xs text-slate-500 sm:flex-row">
+        <div className="mt-8 flex flex-col justify-between gap-3 border-t border-white/10 pt-5 text-xs text-slate-400 sm:flex-row">
           <p>© 2026 NexRoad. All rights reserved.</p>
           <p>Demonstration platform · Chandigarh, India</p>
         </div>

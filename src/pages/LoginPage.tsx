@@ -258,9 +258,9 @@ export default function LoginPage() {
         </Card>
       </div>
 
-      <p className="mt-5 text-center text-xs text-slate-400">
+      <p className="mt-5 text-center text-xs text-slate-600">
         Need help?{' '}
-        <Link to="/contact" className="font-semibold text-emerald-700">
+        <Link to="/contact" className="font-semibold text-emerald-800">
           Contact NexRoad
         </Link>
       </p>

@@ -3,22 +3,28 @@ import { createBrowserRouter } from 'react-router-dom'
 import RoleProtectedRoute from '../components/auth/RoleProtectedRoute'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 
-import AboutPage from '../pages/AboutPage'
-import AdminDashboardPage from '../pages/AdminDashboardPage'
-import ContactPage from '../pages/ContactPage'
-import CustomerDashboardPage from '../pages/CustomerDashboardPage'
 import DashboardEntryPage from '../pages/DashboardEntryPage'
-import DemoPreviewPage from '../pages/DemoPreviewPage'
 import HomePage from '../pages/HomePage'
-import HowItWorksPage from '../pages/HowItWorksPage'
-import LoginPage from '../pages/LoginPage'
 import NotFoundPage from '../pages/NotFoundPage'
-import RegisterPage from '../pages/RegisterPage'
-import ServicesPage from '../pages/ServicesPage'
-import TechnicianDashboardPage from '../pages/TechnicianDashboardPage'
 import UnauthorizedPage from '../pages/UnauthorizedPage'
 
-const router = createBrowserRouter([
+import RouteErrorPage from '../pages/RouteErrorPage'
+import DocumentLayout from './DocumentLayout'
+
+import {
+  AboutPage,
+  AdminDashboardPage,
+  ContactPage,
+  CustomerDashboardPage,
+  DemoPreviewPage,
+  HowItWorksPage,
+  LoginPage,
+  RegisterPage,
+  ServicesPage,
+  TechnicianDashboardPage,
+} from './lazyPages'
+
+const routes = [
   // Public routes
   {
     path: '/',
@@ -111,6 +117,10 @@ const router = createBrowserRouter([
     path: '*',
     element: <NotFoundPage />,
   },
+]
+
+const router = createBrowserRouter([
+  { element: <DocumentLayout />, errorElement: <RouteErrorPage />, children: routes },
 ])
 
 export default router

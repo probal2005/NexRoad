@@ -2,7 +2,7 @@ import { useState } from 'react'
 import { Link, Navigate, useNavigate } from 'react-router-dom'
 import { z } from 'zod'
 import { zodResolver } from '@hookform/resolvers/zod'
-import { useForm } from 'react-hook-form'
+import { useForm, useWatch } from 'react-hook-form'
 import {
   Eye,
   EyeOff,
@@ -55,7 +55,7 @@ export default function RegisterPage() {
     register,
     handleSubmit,
     setError,
-    watch,
+    control,
     formState: { errors, isSubmitting },
   } = useForm<RegisterFormValues>({
     resolver: zodResolver(registerSchema),
@@ -68,7 +68,7 @@ export default function RegisterPage() {
     },
   })
 
-  const selectedAccountType = watch('accountType')
+  const selectedAccountType = useWatch({ control, name: 'accountType' })
 
   if (authLoading) {
     return (
