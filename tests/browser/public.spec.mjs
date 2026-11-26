@@ -16,9 +16,9 @@ test('public pages fit a mobile viewport and update search metadata', async ({ p
     await expect(page.locator('link[rel=canonical]')).toHaveAttribute('href', new RegExp(route === '/' ? '/$' : route + '$'))
     expect(await page.evaluate(() => document.documentElement.scrollWidth)).toBeLessThanOrEqual(390)
   }
-  const favicon = await page.request.get('/nexroad-favicon.png')
-  expect(favicon.ok()).toBe(true)
-  expect(favicon.headers()['content-type']).toMatch(/^image\/png/)
+  const favicon = await page.goto('/nexroad-favicon.png')
+  expect(favicon?.ok()).toBe(true)
+  expect(favicon?.headers()['content-type']).toMatch(/^image\/png/)
   await page.goto('/admin/dashboard')
   await expect(page).toHaveURL(/\/login(?:\?|$)/)
   await expect(page.locator('meta[name=robots]')).toHaveAttribute('content', /noindex/)
