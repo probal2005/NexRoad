@@ -10,6 +10,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_payment_attempts: {
+        Row: { id: string; request_id: string; method: string; result: string; amount_inr: number; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{
+          foreignKeyName: 'booking_payment_attempts_request_id_fkey'
+          columns: ['request_id']
+          isOneToOne: false
+          referencedRelation: 'booking_final_charges'
+          referencedColumns: ['request_id']
+        }]
+      }
+      booking_chat_messages: {
+        Row: { id: number; client_id: string; request_id: string; sender_role: string; body: string; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{
+          foreignKeyName: 'booking_chat_messages_request_id_fkey'
+          columns: ['request_id']
+          isOneToOne: false
+          referencedRelation: 'service_requests'
+          referencedColumns: ['id']
+        }]
+      }
       booking_service_workflow: {
         Row: {
           request_id: string
@@ -498,6 +522,13 @@ export type Database = {
       }
     }
     Functions: {
+      simulate_booking_payment: {
+        Args: { p_request_id: string; p_attempt_id: string; p_method: string; p_succeeds: boolean }
+        Returns: string | null
+      }
+      send_booking_chat: { Args: { p_request_id: string; p_client_id: string; p_body: string }; Returns: number | null }
+      mark_booking_chat_read: { Args: { p_request_id: string; p_through_id: number }; Returns: boolean }
+      booking_chat_unread: { Args: Record<never, never>; Returns: { request_id: string; unread_count: number }[] }
       customer_booking_location: {
         Args: { p_request_id: string }
         Returns: { latitude: number; longitude: number; updated_at: string }[]

@@ -18,7 +18,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 10 | Server-calculated INR pricing implemented for all three services. Includes editable fuel prices and service rates, quote confirmation, immutable snapshots and final simulated charges. |
 | 11 | Service workflows implemented for fuel delivery, mechanical diagnosis and towing. Includes simulated travel, job reports, customer confirmation, linked towing, feedback and a per-booking timeline. |
 | 12 | Private Supabase Realtime subscriptions, booking and offer updates, consent-based location, admin monitoring, reconnect recovery and polling fallback implemented. |
-| 13–15 | Pending. |
+| 13 | Simulated cash and online checkout, failure and retry, payment history and text receipts, participant-only realtime chat, unread counts and paid earnings implemented. |
+| 14–15 | Pending. |
 
 ## Verification
 
@@ -66,3 +67,9 @@ Rollback-only local PostgreSQL tests verified all three service types, permissio
 Dashboards subscribe to private role-checked Broadcast channels. Database messages carry refresh hints only. Booking and location data still pass through authorized database reads. Technicians opt into sharing, the visible dashboard sends fixes no more frequently than every 15 seconds, and the database enforces a 10-second minimum between writes. Location sharing stops on request and old fixes expire after ten minutes. Customer and admin maps refresh after authorized changes.
 
 Local PostgreSQL verified channel topics, blocking client-generated broadcasts, booking location isolation, stop sharing and write throttling. Chromium with simulated WebSocket and Supabase responses verified subscriptions, map marker movement, reconnection, status updates and channel cleanup.
+
+## Phase 13 payment and chat simulation
+
+Customers choose a simulated payment method during booking and can record payment after confirming service. The server uses the immutable final booking charge, preserves failed attempts and accepts only one successful payment. Receipt downloads are text files, and no payment details are requested. Technician earnings use confirmed simulated payments. Active and completed bookings support private chat between the customer and assigned technician, with timestamps, paginated messages and unread counts. Broadcasts carry refresh hints without message text.
+
+PostgreSQL checks verified role access, sender roles, retries, unread tracking, exact amounts, payment privacy, earnings and concurrent payment attempts. Chromium verified the customer chat, unread clearing, failed-message retry, online payment retry and downloaded receipt using simulated Supabase responses.

@@ -3,7 +3,10 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Bell, ClipboardList } from 'lucide-react'
 
 import { supabase } from '../../lib/supabase'
+import BookingChat from './BookingChat'
+import BookingPayments from './BookingPayments'
 import BookingPrice from './BookingPrice'
+import { useBookingChatUnread } from '../../lib/useBookingChatUnread'
 import { formatRupees, readBookingQuote } from '../../lib/bookingPricing'
 import CustomerServiceWorkflow, { type TowFollowup } from './CustomerServiceWorkflow'
 import CustomerComplaintForm from './CustomerComplaintForm'
@@ -14,6 +17,7 @@ import Card from '../ui/Card'
 import ConfirmDialog from '../ui/ConfirmDialog'
 import StatusBadge, { type StatusType } from '../ui/StatusBadge'
 
+const chatStatuses = ['accepted', 'technician_arriving', 'in_progress', 'completed']
 const cancellable = ['requested', 'matching']
 const active = [...cancellable, 'accepted', 'technician_arriving', 'in_progress']
 const terminal = ['completed', 'cancelled', 'expired']
@@ -38,22 +42,24 @@ export default function CustomerRequests({ customerId, categories, onTowFollowup
   categories: { id: string; name: string }[]
   onTowFollowup: (booking: TowFollowup) => void
 }) {
+  const unread = useBookingChatUnread(customerId)
+  const [historyPage, setHistoryPage] = useState(0)
   const [pendingCancellation, setPendingCancellation] = useState<string | null>(null)
   const [cancellationNotice, setCancellationNotice] = useState('')
   const requests = useQuery({
-    queryKey: ['customer-requests', customerId],
+    queryKey: ['customer-requests', customerId, historyPage],
     queryFn: async ({ signal }) => {
-      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method, latitude, longitude, service_outcome, booking_service_workflow!booking_service_workflow_request_id_fkey(*), booking_price_snapshots(quote, booking_final_charges(total_inr))'
+      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method, assigned_technician_id, latitude, longitude, service_outcome, booking_service_workflow!booking_service_workflow_request_id_fkey(*), booking_price_snapshots(quote, booking_final_charges(total_inr))'
       const forStatuses = (states: string[]) => supabase.from('service_requests')
         .select(fields).eq('customer_id', customerId).in('request_status', states)
         .order('requested_at', { ascending: false }).order('id').abortSignal(signal)
       const [current, history] = await Promise.all([
         forStatuses(active),
-        forStatuses(terminal).limit(20),
+        forStatuses(terminal).range(historyPage * 20, historyPage * 20 + 20),
       ])
       if (current.error) throw current.error
       if (history.error) throw history.error
-      return { current: current.data, history: history.data }
+      return { current: current.data, history: history.data.slice(0, 20), hasOlder: history.data.length > 20 }
     },
     refetchInterval: 15000,
   })
@@ -173,7 +179,7 @@ export default function CustomerRequests({ customerId, categories, onTowFollowup
                       )}
                     </>
                   )}
-                  {['accepted', 'technician_arriving', 'in_progress', 'completed'].includes(request.request_status)
+                  {chatStatuses.includes(request.request_status)
                     && <CustomerRequestFeedback requestId={request.id} completed={request.request_status === 'completed'} />}
                   {quote && (
                     <details className="space-y-2 text-sm text-brand-navy">
@@ -185,12 +191,25 @@ export default function CustomerRequests({ customerId, categories, onTowFollowup
                     booking={{ id: request.id, address: request.service_location, latitude: request.latitude,
                       longitude: request.longitude, status: request.request_status, outcome: request.service_outcome }}
                     onTowFollowup={onTowFollowup} />
+                  {request.assigned_technician_id && chatStatuses.includes(request.request_status) && (
+                    <BookingChat requestId={request.id} viewer="customer" unread={unread.data?.[request.id] ?? 0} />
+                  )}
+                  {request.request_status === 'completed' && price?.booking_final_charges?.total_inr != null && (
+                    <BookingPayments requestId={request.id} amount={price.booking_final_charges.total_inr}
+                      paymentMethod={request.payment_method} paymentStatus={request.payment_status} />
+                  )}
                   <CustomerComplaintForm requestId={request.id} />
                 </li>
                 )
               })}
             </ul>
           ) : <p className="mt-4 text-slate-600">{empty}</p>)}
+          {id === 'request-history' && (historyPage > 0 || requests.data?.hasOlder) && (
+            <div className="mt-4 flex flex-wrap gap-2">
+              {historyPage > 0 && <Button size="sm" variant="outline" onClick={() => setHistoryPage(historyPage - 1)}>Newer requests</Button>}
+              {requests.data?.hasOlder && <Button size="sm" variant="outline" onClick={() => setHistoryPage(historyPage + 1)}>Older requests</Button>}
+            </div>
+          )}
         </Card>
       ))}
       <ConfirmDialog open={pendingCancellation !== null} title="Cancel assistance request?"

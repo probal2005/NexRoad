@@ -8,11 +8,14 @@ type Connection = 'connecting' | 'live' | 'reconnecting'
 
 const queryKeys: Record<Audience, Record<string, string[]>> = {
   customer: {
-    booking: ['customer-requests', 'customer-request-updates', 'customer-service-timeline', 'customer-booking-location'],
+    booking: ['customer-requests', 'customer-request-updates', 'customer-service-timeline', 'customer-booking-location', 'booking-chat-unread', 'booking-payment-attempts'],
     location: ['customer-booking-location'],
+    payment: ['customer-requests', 'booking-payment-attempts'],
+    chat: ['booking-chat', 'booking-chat-unread'],
   },
   technician: {
-    booking: ['technician-jobs', 'technician-availability'],
+    booking: ['technician-jobs', 'technician-availability', 'booking-chat-unread'],
+    chat: ['booking-chat', 'booking-chat-unread'],
     offer: ['technician-jobs'],
   },
   admin: {

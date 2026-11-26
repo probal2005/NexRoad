@@ -134,6 +134,7 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
       latitude: position[0],
       longitude: position[1],
       issue_description: notes || null,
+      payment_method: field(data, 'booking-payment-method'),
       fuel_type: category.slug === 'fuel' ? detail : null,
       fuel_litres: category.slug === 'fuel' ? Number(fuelQuantity) : null,
       destination: category.slug === 'towing' ? detail : null,
@@ -193,6 +194,10 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
       )}
       <Textarea name="request-description" label={category?.slug === 'mechanical' ? 'Describe the mechanical issue' : 'Additional details (optional)'}
         required={category?.slug === 'mechanical'} maxLength={2000} rows={3} />
+      <Select name="booking-payment-method" label="Payment method after service" required defaultValue="cash" options={[
+        { value: 'cash', label: 'Cash (simulated)' },
+        { value: 'online', label: 'Online (simulated)' },
+      ]} />
       {estimate.isError && <Alert variant="error" title="Could not calculate an estimate. Check the service details and try again." />}
       {locationError && <Alert variant="error" title={locationError} />}
 
