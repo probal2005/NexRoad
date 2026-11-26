@@ -21,7 +21,7 @@ NexRoad is a roadside-assistance simulation for Chandigarh. Continue the existin
 | 9. Booking and matching | Match active, approved technicians by service, availability and location. Rank by straight-line distance, generate expiring offers, retry through Supabase Cron, and enforce a single transactional winner. | Concurrent offers produce one winner, and a busy technician cannot accept another active booking. |
 | 10. Pricing | Calculate and persist a server-verified INR quote using configured service and fuel rates, fuel quantity, and distance. The completion workflow records the same quote as the final simulated charge. | Customer confirmation and final simulated charges use the immutable booking quote. Rate changes only affect new quotes. |
 | 11. Service workflow | Simulate travel and arrival, record service-specific reports, require owner confirmation before completion, and support garage outcomes and linked towing. Show the service timeline and completed-job feedback. | Each actor can perform only its permitted transitions. |
-| 12. Realtime | Subscribe to authorized request, offer and location updates with reconnect handling. | Participants receive their own changes and recover current state after reconnecting. |
+| 12. Realtime | Subscribe to private request, offer, location and admin updates. Use authorized queries, opt-in throttled fixes, reconnect refresh and polling fallback. | Participants receive their own changes and recover current state after reconnecting. |
 | 13. Payments and chat | Simulate payment outcomes and add booking-scoped messages. | Repeated actions are safe and participants only see their own booking conversations. |
 | 14. Testing and optimization | Run role scenarios, concurrency and policy tests, accessibility checks and mobile performance review. | Record test results and resolve release-blocking failures. |
 | 15. Deployment and documentation | Document setup, environment variables, migration and operations. Release approved changes and smoke-test production. | Production routes, authorization and core workflows are verified. |
@@ -35,7 +35,7 @@ NexRoad is a roadside-assistance simulation for Chandigarh. Continue the existin
 - [x] Add customer profile settings and service-specific request fields.
 - [x] Add an indicative listed starting rate, request review and confirmation, assigned technician name, completed-request feedback and a refreshable activity feed.
 - [x] Replace the indicative estimate with persisted server-verified quotes in Phase 10.
-- [ ] Add live notifications in Phase 12.
+- [x] Add live request and offer notifications in Phase 12.
 - [ ] Run live customer verification after approval and application of the review migrations.
 
 Keep development in the existing source checkout. Review hosted migrations before application. GitHub pushes and Vercel releases require authorization for the changes being released.

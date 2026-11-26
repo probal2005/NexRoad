@@ -1,8 +1,10 @@
-import { useState } from 'react'
+import { useEffect, useState } from 'react'
 import { Link } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../auth/useAuth'
+import LiveConnection from '../components/common/LiveConnection'
+import { useDashboardRealtime } from '../lib/useDashboardRealtime'
 import BrandLogo from '../components/common/BrandLogo'
 import TechnicianJobs from '../components/common/TechnicianJobs'
 import TechnicianServices from '../components/common/TechnicianServices'
@@ -12,11 +14,24 @@ import Card from '../components/ui/Card'
 import StatusBadge from '../components/ui/StatusBadge'
 import { supabase } from '../lib/supabase'
 
+function getCurrentFix() {
+  return new Promise<GeolocationPosition>((resolve, reject) => {
+    if (!navigator.geolocation) {
+      reject(new Error('Location access is unavailable.'))
+      return
+    }
+    navigator.geolocation.getCurrentPosition(resolve, () => reject(new Error('Could not access your location. Check browser permissions.')),
+      { timeout: 10000, maximumAge: 5000 })
+  })
+}
+
 type AvailabilityAction = 'online' | 'offline' | 'share' | 'stop' | 'resume' | 'pause'
 
 function TechnicianAvailability({ technicianId }: { technicianId: string }) {
   const client = useQueryClient()
   const key = ['technician-availability', technicianId]
+  const [tracking, setTracking] = useState(false)
+  const [trackingError, setTrackingError] = useState('')
   const availability = useQuery({
     queryKey: key,
     queryFn: async ({ signal }) => {
@@ -30,10 +45,7 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
   const save = useMutation({
     mutationFn: async (action: AvailabilityAction) => {
       if (action === 'share') {
-        if (!navigator.geolocation) throw new Error('Location access is unavailable.')
-        const position = await new Promise<GeolocationPosition>((resolve, reject) => {
-          navigator.geolocation.getCurrentPosition(resolve, () => reject(new Error('Could not access your location. Check browser permissions.')), { timeout: 10000 })
-        })
+        const position = await getCurrentFix()
         const { data, error } = await supabase.rpc('share_technician_location', {
           p_latitude: position.coords.latitude,
           p_longitude: position.coords.longitude,
@@ -58,8 +70,61 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
       if (result.error) throw result.error
       client.setQueryData(key, result.data)
     },
+    onSuccess: (_, action) => {
+      if (action === 'share') {
+        setTrackingError('')
+        setTracking(true)
+      }
+    },
     onSettled: () => client.invalidateQueries({ queryKey: key }),
   })
+
+  const canTrack = tracking && availability.data?.is_online && availability.data.location_sharing
+  useEffect(() => {
+    if (!canTrack) return
+
+    let active = true
+    let busy = false
+    let controller: AbortController | undefined
+    const timer = window.setInterval(() => {
+      if (!active || busy || document.visibilityState !== 'visible') return
+      busy = true
+      void getCurrentFix().then(async ({ coords }) => {
+        if (!active) return
+        controller = new AbortController()
+        const { data, error } = await supabase.rpc('update_shared_technician_location', {
+          p_latitude: coords.latitude, p_longitude: coords.longitude,
+        }).abortSignal(controller.signal)
+        if (!active) return
+        if (error) {
+          setTrackingError('Location update interrupted. Retrying while this page is open.')
+        } else if (data === 'inactive') {
+          setTracking(false)
+          setTrackingError('Location sharing is paused.')
+        } else {
+          setTrackingError('')
+        }
+      }).catch(() => {
+        if (active) {
+          setTracking(false)
+          setTrackingError('Location access interrupted. Start sharing again to resume.')
+        }
+      }).finally(() => { busy = false })
+    }, 15000)
+
+    return () => {
+      active = false
+      window.clearInterval(timer)
+      controller?.abort()
+    }
+  }, [canTrack])
+
+  function changeAvailability(action: AvailabilityAction) {
+    if (save.isPending) return
+    if (action === 'stop' || action === 'offline') setTracking(false)
+    setTrackingError('')
+    save.mutate(action)
+  }
 
   return (
     <Card className="space-y-4">
@@ -80,22 +145,22 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
             {availability.data?.location_sharing ? 'Location sharing on' : 'Location sharing off'}
           </p>
           <Button loading={save.isPending} onClick={() => {
-            if (!save.isPending) save.mutate(availability.data?.is_online ? 'offline' : 'online')
+            if (!save.isPending) changeAvailability(availability.data?.is_online ? 'offline' : 'online')
           }}>
             {availability.data?.is_online ? 'Go offline' : 'Go online'}
           </Button>
           {availability.data?.is_online && (
             <div className="space-y-2">
-              <p className="text-sm text-slate-600">Share a one-time location for matching. Refresh it before accepting offers.</p>
+              <p className="text-sm text-slate-600">Assigned customers and admins can see your shared location during active work. Updates run while this tab is visible. The last position expires after ten minutes.</p>
               <div className="flex flex-wrap gap-2">
-                <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => save.mutate('share')}>
-                  {availability.data.location_sharing ? 'Refresh shared location' : 'Share current location'}
+                <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => changeAvailability('share')}>
+                  {canTrack ? 'Refresh shared location' : 'Start live location sharing'}
                 </Button>
                 {availability.data.location_sharing && (
                   <>
-                    <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => save.mutate('stop')}>Stop sharing</Button>
+                    <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => changeAvailability('stop')}>Stop sharing</Button>
                     <Button variant="outline" size="sm" disabled={save.isPending}
-                      onClick={() => save.mutate(availability.data?.accepting_requests ? 'pause' : 'resume')}>
+                      onClick={() => changeAvailability(availability.data?.accepting_requests ? 'pause' : 'resume')}>
                       {availability.data.accepting_requests ? 'Pause incoming requests' : 'Accept incoming requests'}
                     </Button>
                   </>
@@ -105,6 +170,8 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
           )}
         </>
       )}
+      {canTrack && <p role="status" className="text-sm text-emerald-800">Live location sharing is running.</p>}
+      {trackingError && <Alert variant="warning" title={trackingError} />}
       {save.isError && <Alert variant="error" title={save.error instanceof Error ? save.error.message : 'Could not update availability. Please try again.'} />}
     </Card>
   )
@@ -112,6 +179,7 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
 
 function TechnicianWorkspace({ applicationOnly }: { applicationOnly: boolean }) {
   const { profile, signOut } = useAuth()
+  const connection = useDashboardRealtime('technician', !applicationOnly && profile?.role === 'technician' ? profile.id : undefined)
   const [signOutError, setSignOutError] = useState(false)
   const application = useQuery({
     queryKey: ['technician-application', profile?.id],
@@ -142,6 +210,7 @@ function TechnicianWorkspace({ applicationOnly }: { applicationOnly: boolean }) 
         <h1 className="text-3xl font-extrabold text-brand-navy">
           {applicationOnly ? 'Technician application' : 'Technician Dashboard'}
         </h1>
+        {!applicationOnly && <LiveConnection status={connection} />}
         {signOutError && <Alert variant="error" title="Could not sign out. Please try again." />}
         <Card className="space-y-4">
           <div className="flex flex-wrap items-center justify-between gap-3">

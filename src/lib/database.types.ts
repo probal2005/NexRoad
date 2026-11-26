@@ -498,6 +498,14 @@ export type Database = {
       }
     }
     Functions: {
+      customer_booking_location: {
+        Args: { p_request_id: string }
+        Returns: { latitude: number; longitude: number; updated_at: string }[]
+      }
+      update_shared_technician_location: {
+        Args: { p_latitude: number; p_longitude: number }
+        Returns: string
+      }
       submit_technician_service: { Args: { p_request_id: string; p_report: Json }; Returns: boolean }
       confirm_customer_service: { Args: { p_request_id: string }; Returns: boolean }
       create_towing_followup: {

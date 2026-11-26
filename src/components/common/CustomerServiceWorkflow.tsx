@@ -27,9 +27,22 @@ export default function CustomerServiceWorkflow({ customerId, booking, workflow,
   const [showMap, setShowMap] = useState(false)
   const [showTimeline, setShowTimeline] = useState(false)
   const client = useQueryClient()
+  const showLocation = ['accepted', 'technician_arriving', 'in_progress'].includes(booking.status)
+  const location = useQuery({
+    queryKey: ['customer-booking-location', booking.id],
+    enabled: showMap && showLocation,
+    refetchInterval: 15000,
+    queryFn: async ({ signal }) => {
+      const { data, error } = await supabase.rpc('customer_booking_location', { p_request_id: booking.id })
+        .abortSignal(signal).maybeSingle()
+      if (error) throw error
+      return data
+    },
+  })
   const timeline = useQuery({
     queryKey: ['customer-service-timeline', booking.id],
     enabled: showTimeline,
+    refetchInterval: 15000,
     queryFn: async ({ signal }) => {
       const { data, error } = await supabase.from('request_activity_history')
         .select('id,new_status,created_at').eq('request_id', booking.id).eq('event_type', 'request_status')
@@ -62,14 +75,23 @@ export default function CustomerServiceWorkflow({ customerId, booking, workflow,
 
   return (
     <div className="space-y-2">
-      {booking.status === 'technician_arriving' && workflow?.departed_at && (
+      {showLocation && (
         <>
           <Button size="sm" variant="outline" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
-            {showMap ? 'Hide simulated arrival' : 'Show simulated arrival'}
+            {showMap ? 'Hide technician map' : 'Show technician map'}
           </Button>
-          {showMap && <Suspense fallback={<p role="status">Loading arrival map…</p>}>
-            <ArrivalMap latitude={booking.latitude} longitude={booking.longitude} departedAt={workflow.departed_at} />
-          </Suspense>}
+          {showMap && (
+            <>
+              {location.isPending && <p role="status" className="text-sm text-slate-600">Checking shared location…</p>}
+              {location.data || (booking.status === 'technician_arriving' && workflow?.departed_at) ? (
+                <Suspense fallback={<p role="status">Loading arrival map…</p>}>
+                  <ArrivalMap latitude={booking.latitude} longitude={booking.longitude}
+                    departedAt={workflow?.departed_at ?? null} live={location.data} />
+                </Suspense>
+              ) : !location.isPending && <p className="text-sm text-slate-600">No recent shared technician location.</p>}
+              {location.data && <p className="text-xs text-slate-600">Last updated {time.format(new Date(location.data.updated_at))}</p>}
+            </>
+          )}
         </>
       )}
       {workflow?.submitted_at && (

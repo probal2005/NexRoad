@@ -7,6 +7,8 @@ import type { UserProfile } from '../auth/AuthContext'
 import { useAuth } from '../auth/useAuth'
 import BookingPrice from '../components/common/BookingPrice'
 import { readBookingQuote, type BookingQuote } from '../lib/bookingPricing'
+import LiveConnection from '../components/common/LiveConnection'
+import { useDashboardRealtime } from '../lib/useDashboardRealtime'
 import BrandLogo from '../components/common/BrandLogo'
 import CustomerRequests from '../components/common/CustomerRequests'
 import type { TowFollowup } from '../components/common/CustomerServiceWorkflow'
@@ -298,6 +300,7 @@ function VehicleForm({ customerId, editing, onCancel, onSaved }: {
 function CustomerDashboard({ profile }: { profile: UserProfile }) {
   const { signOut, user } = useAuth()
   const customerId = profile.id
+  const connection = useDashboardRealtime('customer', customerId)
   const [customerSettings, setCustomerSettings] = useState({ full_name: profile.full_name, phone: profile.phone })
   const client = useQueryClient()
   const [editing, setEditing] = useState<Vehicle | null>(null)
@@ -357,6 +360,7 @@ function CustomerDashboard({ profile }: { profile: UserProfile }) {
         <div>
           <h1 className="text-3xl font-extrabold text-brand-navy">User Dashboard</h1>
           <p className="mt-1 text-slate-600">Welcome, {customerSettings.full_name || 'NexRoad member'}.</p>
+        <LiveConnection status={connection} />
         </div>
         <nav aria-label="Dashboard sections" className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-emerald-800">
           <a href="#request-assistance" className="hover:underline">Request assistance</a>

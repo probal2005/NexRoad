@@ -3,6 +3,8 @@ import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient
 
 import { useAuth } from '../auth/useAuth'
 import AdminFuelPrices from '../components/common/AdminFuelPrices'
+import LiveConnection from '../components/common/LiveConnection'
+import { useDashboardRealtime } from '../lib/useDashboardRealtime'
 import BrandLogo from '../components/common/BrandLogo'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
@@ -64,6 +66,7 @@ function StatusChart({ title, values }: { title: string; values: Record<string, 
 
 function AdminWorkspace() {
   const { user, signOut } = useAuth()
+  const connection = useDashboardRealtime('admin', user?.id)
   const client = useQueryClient()
   const [search, setSearch] = useState('')
   const [confirmation, setConfirmation] = useState<Confirmation | null>(null)
@@ -72,6 +75,7 @@ function AdminWorkspace() {
   const key = ['admin-overview', user?.id]
   const overview = useQuery({
     queryKey: key,
+    refetchInterval: 15000,
     queryFn: async ({ signal }) => {
       const { data, error } = await supabase.rpc('admin_overview').abortSignal(signal)
       if (error) throw error
@@ -125,6 +129,7 @@ function AdminWorkspace() {
       <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
         <div className="flex flex-wrap items-center justify-between gap-3">
           <h1 className="text-3xl font-extrabold text-brand-navy">Admin Dashboard</h1>
+        <LiveConnection status={connection} />
           <Button size="sm" variant="outline" loading={overview.isFetching} onClick={() => void overview.refetch()}>Refresh dashboard</Button>
         </div>
         {overview.isPending && <p role="status" className={textStyle}>Loading admin overview…</p>}

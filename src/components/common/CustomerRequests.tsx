@@ -55,11 +55,12 @@ export default function CustomerRequests({ customerId, categories, onTowFollowup
       if (history.error) throw history.error
       return { current: current.data, history: history.data }
     },
-    refetchInterval: (query) => query.state.data?.current.length ? 15000 : false,
+    refetchInterval: 15000,
   })
 
   const updates = useQuery({
     queryKey: ['customer-request-updates', customerId],
+    refetchInterval: 15000,
     queryFn: async ({ signal }) => {
       const { data, error } = await supabase.from('request_activity_history')
         .select('id, request_id, new_status, created_at').eq('event_type', 'request_status')
@@ -109,7 +110,7 @@ export default function CustomerRequests({ customerId, categories, onTowFollowup
         {updates.isPending && <p className="mt-3 text-sm text-slate-600" role="status">Loading updates…</p>}
         {updates.isError && <p className="mt-3 text-sm text-slate-600" role="status">Request updates are unavailable.</p>}
         {updates.data && (updates.data.length ? (
-          <ul className="mt-3 divide-y divide-slate-200">
+          <ul aria-live="polite" className="mt-3 divide-y divide-slate-200">
             {updates.data.map((event) => (
               <li key={event.id} className="py-2 text-sm text-slate-600">
                 <strong className="text-brand-navy">Request {event.request_id.slice(0, 8)}</strong>

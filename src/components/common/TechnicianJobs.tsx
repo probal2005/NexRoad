@@ -86,7 +86,8 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
         {change.isSuccess && change.data && <Alert variant="success" title="Job or offer updated." />}
         {data.data && (
           <>
-            {data.data.offers.length === 0 && <p className="text-sm text-slate-600">No open offers.</p>}
+            <p aria-live="polite" className="text-sm text-slate-600">{data.data.offers.length
+              ? `${data.data.offers.length} incoming ${data.data.offers.length === 1 ? 'offer' : 'offers'}` : 'No open offers.'}</p>
             {data.data.offers.map((offer) => (
               <div key={offer.id} className="space-y-3 rounded-xl border border-slate-200 p-4">
                 <h3 className="font-bold text-brand-navy">{offer.service} offer</h3>
