@@ -33,6 +33,16 @@ test("Admin operations and route isolation", async ({ page, baseURL: base }) => 
     assert.equal(role,'admin')
     return route.fulfill({json:state})
   })
+  let petrol = 95
+  await page.route('**/rest/v1/rpc/admin_fuel_prices', route => route.fulfill({ json: [
+    { fuel_type: 'petrol', unit_price_inr: petrol }, { fuel_type: 'diesel', unit_price_inr: 87 },
+  ] }))
+  await page.route('**/rest/v1/rpc/admin_set_fuel_price', route => {
+    const values = route.request().postDataJSON()
+    assert.deepEqual(values, { p_fuel_type: 'petrol', p_unit_price_inr: 97.25 })
+    petrol = values.p_unit_price_inr
+    return route.fulfill({ json: true })
+  })
   const actions = []
   await page.route('**/rest/v1/rpc/admin_update', route => {
     const {p_action,p_target,p_values} = route.request().postDataJSON()
@@ -64,6 +74,21 @@ test("Admin operations and route isolation", async ({ page, baseURL: base }) => 
   await page.getByRole('button',{name:'Sign in',exact:true}).click()
   await page.waitForURL('**/admin/dashboard')
   await page.getByRole('heading',{name:'Bookings and simulated payments'}).waitFor()
+  const hero = page.locator('main img[fetchpriority="high"]')
+  await expect(hero).toBeVisible()
+  await hero.evaluate(image => image.decode())
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 844 })
+    assert.equal(await page.evaluate(() => document.documentElement.scrollWidth > innerWidth), false)
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
+  const reviewAccounts = page.getByRole('link', { name: 'Review accounts' })
+  await expect(reviewAccounts).toHaveCSS('color', 'rgb(16, 28, 44)')
+  await reviewAccounts.click()
+  await expect(page).toHaveURL(base + '/admin/dashboard#accounts')
+  await page.getByLabel('Filter loaded accounts').fill('unmatched')
+  await expect(page.getByText('No accounts match this filter.')).toBeVisible()
+  await page.getByLabel('Filter loaded accounts').clear()
   const approve = page.getByRole('button', { name: 'Approve', exact: true })
   const dialog = page.getByRole('alertdialog')
   await approve.focus()
@@ -80,6 +105,10 @@ test("Admin operations and route isolation", async ({ page, baseURL: base }) => 
   await page.getByRole('button',{name:'Reactivate',exact:true}).waitFor()
   await confirm('Reactivate')
   await page.getByRole('button',{name:'Suspend',exact:true}).waitFor()
+  await page.getByLabel('Petrol (₹/L)').fill('97.25')
+  await page.getByRole('button', { name: 'Save petrol price' }).click()
+  await expect(page.getByText('Fuel price saved.', { exact: true })).toBeVisible()
+  assert.equal(petrol, 97.25)
   await page.getByLabel('Base rate (₹)').fill('175')
   await page.getByRole('button',{name:'Save default rates'}).click()
   await page.getByText('update price',{exact:false}).waitFor()
