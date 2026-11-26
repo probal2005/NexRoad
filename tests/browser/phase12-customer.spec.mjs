@@ -1,4 +1,4 @@
-import { test } from "@playwright/test"
+import { expect, test } from "@playwright/test"
 import assert from "node:assert/strict"
 
 const id = '00000000-0000-0000-0000-000000000001';
@@ -121,6 +121,6 @@ test("Live tracking disconnect and recovery", async ({ page, baseURL: base }) =>
   await page.getByText(/A follow-up tow is already booked/).waitFor()
   await page.getByRole('link',{name:'Technician application'}).click()
   await page.waitForURL('**/technician/application')
-  assert.ok(leaves>=1)
+  await expect.poll(() => leaves).toBeGreaterThanOrEqual(1)
   assert.deepEqual(errors,[])
 })
