@@ -1,15 +1,15 @@
 import { lazy, Suspense, useState, type SubmitEvent } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { CarFront, Crosshair, LifeBuoy } from 'lucide-react'
-import { Link } from 'react-router-dom'
+import { ArrowRight, CarFront, ClipboardList, Crosshair, LifeBuoy, MapPin } from 'lucide-react'
 
+import roadsideCover from '../assets/customer-roadside.webp'
 import type { UserProfile } from '../auth/AuthContext'
 import { useAuth } from '../auth/useAuth'
 import BookingPrice from '../components/common/BookingPrice'
 import { readBookingQuote, type BookingQuote } from '../lib/bookingPricing'
 import LiveConnection from '../components/common/LiveConnection'
 import { useDashboardRealtime } from '../lib/useDashboardRealtime'
-import BrandLogo from '../components/common/BrandLogo'
+import DashboardLayout from '../components/layout/DashboardLayout'
 import CustomerRequests from '../components/common/CustomerRequests'
 import type { TowFollowup } from '../components/common/CustomerServiceWorkflow'
 import CustomerSettings from '../components/common/CustomerSettings'
@@ -152,57 +152,66 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
       {followup && <Alert title="Follow-up towing">
         Pickup is copied from the mechanical booking. <Button size="sm" variant="ghost" disabled={request.isPending} onClick={onLeaveFollowup}>Exit follow-up</Button>
       </Alert>}
-      <Select name="service-category" disabled={Boolean(followup)} label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
-      <Select name="request-vehicle" label="Vehicle (optional)" placeholder="Continue without a saved vehicle"
-        options={vehicles.map(({ id, make, model }) => ({ value: id, label: `${make} ${model}` }))} />
-      <Input name="service-location" label="Pickup address or landmark" defaultValue={followup?.address} readOnly={Boolean(followup)} required minLength={3} maxLength={500} placeholder="e.g. Sector 17 bus stand, Chandigarh" />
-      {!followup && <div className="flex flex-wrap gap-2">
-        <Button variant="outline" size="sm" loading={locating} onClick={locate} leftIcon={<Crosshair size={15} />}>Use my location</Button>
-        <Button variant="outline" size="sm" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
-          {showMap ? 'Hide pickup map' : 'Choose on map'}
-        </Button>
-      </div>}
-      {showMap && (
-        <>
-          <p className="text-sm text-slate-600">Click the map to set the pickup point, or enter coordinates below.</p>
-          <Suspense fallback={<p role="status">Loading pickup map…</p>}>
-            <PickupMap position={position} onSelect={selectPickup} />
-          </Suspense>
-        </>
-      )}
-      <div className="grid grid-cols-2 gap-3">
-        <Input name="latitude" label="Latitude" readOnly={Boolean(followup)} type="number" required min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} />
-        <Input name="longitude" label="Longitude" readOnly={Boolean(followup)} type="number" required min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} />
-      </div>
-      {category?.slug === 'fuel' && (
-        <div className="grid gap-3 sm:grid-cols-2">
-          <Select name="service-detail" label="Fuel type" required options={[
-            { label: 'Petrol', value: 'Petrol' },
-            { label: 'Diesel', value: 'Diesel' },
-          ]} />
-          <Input name="fuel-quantity" label="Fuel quantity (litres)" type="number" min={1} max={50} step="0.01" required />
+      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
+        <legend className="px-2 text-sm font-bold text-brand-navy">Service and vehicle</legend>
+        <Select name="service-category" disabled={Boolean(followup)} label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
+        <Select name="request-vehicle" label="Vehicle (optional)" placeholder="Continue without a saved vehicle"
+          options={vehicles.map(({ id, make, model }) => ({ value: id, label: `${make} ${model}` }))} />
+      </fieldset>
+      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
+        <legend className="px-2 text-sm font-bold text-brand-navy">Pickup location</legend>
+        <Input name="service-location" label="Pickup address or landmark" defaultValue={followup?.address} readOnly={Boolean(followup)} required minLength={3} maxLength={500} placeholder="e.g. Sector 17 bus stand, Chandigarh" />
+        {!followup && <div className="flex flex-wrap gap-2">
+          <Button variant="outline" size="sm" loading={locating} onClick={locate} leftIcon={<Crosshair size={15} />}>Use my location</Button>
+          <Button variant="outline" size="sm" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
+            {showMap ? 'Hide pickup map' : 'Choose on map'}
+          </Button>
+        </div>}
+        {showMap && (
+          <>
+            <p className="text-sm text-slate-600">Click the map to set the pickup point, or enter coordinates below.</p>
+            <Suspense fallback={<p role="status">Loading pickup map…</p>}>
+              <PickupMap position={position} onSelect={selectPickup} />
+            </Suspense>
+          </>
+        )}
+        <div className="grid gap-3 min-[420px]:grid-cols-2">
+          <Input name="latitude" label="Latitude" readOnly={Boolean(followup)} type="number" required min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} />
+          <Input name="longitude" label="Longitude" readOnly={Boolean(followup)} type="number" required min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} />
         </div>
-      )}
-      {category?.slug === 'towing' && (
-        <div className="space-y-3">
-          <Input key="tow-destination" name="service-detail" label="Tow destination" minLength={3} maxLength={500} required />
-          <div className="grid grid-cols-2 gap-3">
-            <Input name="destination-latitude" label="Drop-off latitude" type="number" required min={-90} max={90} step="any" />
-            <Input name="destination-longitude" label="Drop-off longitude" type="number" required min={-180} max={180} step="any" />
+      </fieldset>
+      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
+        <legend className="px-2 text-sm font-bold text-brand-navy">Service details and payment</legend>
+        {category?.slug === 'fuel' && (
+          <div className="grid gap-3 sm:grid-cols-2">
+            <Select name="service-detail" label="Fuel type" required options={[
+              { label: 'Petrol', value: 'Petrol' },
+              { label: 'Diesel', value: 'Diesel' },
+            ]} />
+            <Input name="fuel-quantity" label="Fuel quantity (litres)" type="number" min={1} max={50} step="0.01" required />
           </div>
-        </div>
-      )}
-      <Textarea name="request-description" label={category?.slug === 'mechanical' ? 'Describe the mechanical issue' : 'Additional details (optional)'}
-        required={category?.slug === 'mechanical'} maxLength={2000} rows={3} />
-      <Select name="booking-payment-method" label="Payment method after service" required defaultValue="cash" options={[
-        { value: 'cash', label: 'Cash (simulated)' },
-        { value: 'online', label: 'Online (simulated)' },
-      ]} />
+        )}
+        {category?.slug === 'towing' && (
+          <div className="space-y-3">
+            <Input key="tow-destination" name="service-detail" label="Tow destination" minLength={3} maxLength={500} required />
+            <div className="grid gap-3 min-[420px]:grid-cols-2">
+              <Input name="destination-latitude" label="Drop-off latitude" type="number" required min={-90} max={90} step="any" />
+              <Input name="destination-longitude" label="Drop-off longitude" type="number" required min={-180} max={180} step="any" />
+            </div>
+          </div>
+        )}
+        <Textarea name="request-description" label={category?.slug === 'mechanical' ? 'Describe the mechanical issue' : 'Additional details (optional)'}
+          required={category?.slug === 'mechanical'} maxLength={2000} rows={3} />
+        <Select name="booking-payment-method" label="Payment method after service" required defaultValue="cash" options={[
+          { value: 'cash', label: 'Cash (simulated)' },
+          { value: 'online', label: 'Online (simulated)' },
+        ]} />
+      </fieldset>
       {estimate.isError && <Alert variant="error" title="Could not calculate an estimate. Check the service details and try again." />}
       {locationError && <Alert variant="error" title={locationError} />}
 
       {request.isSuccess && <Alert variant="success" title="Request submitted." />}
-      <Button type="submit" loading={estimate.isPending || request.isPending} disabled={!categories.length || draft !== null}>Review price</Button>
+      <Button type="submit" loading={estimate.isPending || request.isPending} disabled={!categories.length || draft !== null} rightIcon={<ArrowRight size={16} aria-hidden />}>Review price</Button>
       <ConfirmDialog open={draft !== null} title="Confirm assistance request"
         description={`${category?.name ?? 'Roadside assistance'} at ${draft?.address ?? ''}. This quote is stored when you book.`}
         confirmLabel="Send request" cancelLabel="Keep editing" loading={request.isPending}
@@ -287,7 +296,7 @@ function VehicleForm({ customerId, editing, onCancel, onSaved }: {
         { value: 'motorcycle', label: 'Motorcycle' },
         { value: 'other', label: 'Other' },
       ]} />
-      <div className="grid grid-cols-2 gap-3">
+      <div className="grid gap-3 min-[420px]:grid-cols-2">
         <Input name="vehicle-make" label="Make" required maxLength={60} defaultValue={editing?.make} />
         <Input name="vehicle-model" label="Model" required maxLength={60} defaultValue={editing?.model} />
       </div>
@@ -354,86 +363,95 @@ function CustomerDashboard({ profile }: { profile: UserProfile }) {
   }
 
   return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-6xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <BrandLogo />
-          <Button variant="outline" size="sm" onClick={() => void signOut().catch(() => setSignOutError(true))}>Sign out</Button>
+    <DashboardLayout
+      title="User Dashboard"
+      coverImage={roadsideCover}
+      actions={(
+        <div className="mt-5 flex flex-wrap gap-2.5">
+          <a href="#request-assistance" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-green px-4 text-sm font-bold text-brand-navy! hover:bg-emerald-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            <LifeBuoy size={17} aria-hidden /> Start a request <ArrowRight size={16} aria-hidden />
+          </a>
+          <a href="#active-requests" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/50 bg-brand-navy/70 px-4 text-sm font-semibold text-white hover:bg-brand-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            <ClipboardList size={17} aria-hidden /> Track requests
+          </a>
         </div>
-      </header>
-      <div className="mx-auto max-w-6xl space-y-6 px-4 py-8 sm:px-6">
-        <div>
-          <h1 className="text-3xl font-extrabold text-brand-navy">User Dashboard</h1>
-          <p className="mt-1 text-slate-600">Welcome, {customerSettings.full_name || 'NexRoad member'}.</p>
-        <LiveConnection status={connection} />
-        </div>
-        <nav aria-label="Dashboard sections" className="flex flex-wrap gap-x-5 gap-y-2 text-sm font-semibold text-emerald-800">
-          <a href="#request-assistance" className="hover:underline">Request assistance</a>
-          <a href="#active-requests" className="hover:underline">Active requests</a>
-          <a href="#request-updates" className="hover:underline">Updates</a>
-          <a href="#request-history" className="hover:underline">History</a>
-          <a href="#saved-vehicles" className="hover:underline">Saved vehicles{vehicles.data ? ` (${vehicles.data.length})` : ''}</a>
-          <a href="#customer-settings" className="hover:underline">Settings</a>
-          <Link to="/technician/application" className="hover:underline">Technician application</Link>
-        </nav>
-        {signOutError && <Alert variant="error" title="Could not sign out. Please try again." />}
-        <div className="grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
-          <Card id="request-assistance" className="scroll-mt-4">
-            <h2 className="flex items-center gap-2 text-xl font-bold text-brand-navy"><LifeBuoy size={21} /> Request assistance</h2>
-            {towUnavailable && <Alert variant="warning" title="Towing is currently unavailable." />}
-            {categories.isPending && <p className="mt-4 text-slate-600" role="status">Loading services…</p>}
-            {categories.isError && <div className="mt-4"><Alert variant="error" title="Could not load services."><Button size="sm" variant="outline" onClick={() => void categories.refetch()}>Retry services</Button></Alert></div>}
-            {categories.isSuccess && (activeCategories.length
-              ? <RequestForm key={followup?.id ?? 'new'} customerId={customerId} categories={activeCategories}
-                vehicles={vehicles.data ?? []} followup={followup} onLeaveFollowup={() => setFollowup(null)} />
-              : <p className="mt-4 text-slate-600">No services are currently available.</p>)}
-          </Card>
-          <div className="space-y-6">
-            <CustomerRequests customerId={customerId} categories={categories.data ?? []} onTowFollowup={startTowFollowup} />
-            <Card id="saved-vehicles" className="scroll-mt-4">
-              <h2 className="flex items-center gap-2 text-xl font-bold text-brand-navy"><CarFront size={21} /> Saved vehicles</h2>
-              {vehicles.isPending && <p className="mt-4 text-slate-600" role="status">Loading vehicles…</p>}
-              {vehicles.isError && <div className="mt-4"><Alert variant="error" title="Could not load your vehicles."><Button size="sm" variant="outline" onClick={() => void vehicles.refetch()}>Retry vehicles</Button></Alert></div>}
-              {vehicles.isSuccess && (vehicles.data.length ? (
-                <ul className="mt-3 divide-y divide-slate-200">
-                  {vehicles.data.map((vehicle) => (
-                    <li key={vehicle.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
-                      <div><p className="font-semibold text-brand-navy">{vehicle.make} {vehicle.model}</p>
-                      <p className="text-sm text-slate-600">{vehicle.registration_number ?? vehicle.vehicle_type}</p></div>
-                      <div className="flex gap-1">
-                        <Button size="sm" variant="ghost" aria-label={`Edit ${vehicle.make} ${vehicle.model}`} onClick={() => {
-                          setVehicleNotice('')
-                          setEditing(vehicle)
-                        }}>Edit</Button>
-                        <Button size="sm" variant="ghost" aria-label={`Remove ${vehicle.make} ${vehicle.model}`} onClick={() => {
-                          removeVehicle.reset()
-                          setVehicleNotice('')
-                          setRemoving(vehicle)
-                        }}>Remove</Button>
-                      </div>
-                    </li>
-                  ))}
-                </ul>
-              ) : <p className="mt-4 text-slate-600">You haven’t saved a vehicle yet.</p>)}
-              {removeVehicle.isError && <Alert variant="error" title="Could not remove your vehicle." />}
-              {vehicleNotice && <Alert variant="success" title={vehicleNotice} />}
-              <VehicleForm key={editing?.id ?? 'new'} customerId={customerId} editing={editing}
-                onCancel={() => setEditing(null)} onSaved={() => {
-                  setEditing(null)
-                  setVehicleNotice('Vehicle saved.')
-                }} />
-              <ConfirmDialog open={removing !== null} title="Remove saved vehicle?"
-                description={`Remove ${removing?.make ?? ''} ${removing?.model ?? ''} from your saved vehicles? Existing requests will stay in your history.`}
-                confirmLabel="Remove vehicle" variant="danger" loading={removeVehicle.isPending}
-                onClose={() => setRemoving(null)} onConfirm={() => {
-                  if (removing) removeVehicle.mutate(removing.id)
-                }} />
-            </Card>
-            <CustomerSettings profile={{ ...profile, ...customerSettings }} email={user?.email ?? ''} onSaved={setCustomerSettings} />
+      )}
+      description={`Welcome, ${customerSettings.full_name || 'NexRoad member'}. Book roadside assistance and track your requests here.`}
+      status={<LiveConnection status={connection} />}
+      onSignOut={() => void signOut().catch(() => setSignOutError(true))}
+      sections={[
+        ['request-assistance', 'Request assistance'], ['active-requests', 'Active requests'],
+        ['request-updates', 'Updates'], ['request-history', 'History'],
+        ['saved-vehicles', 'Saved vehicles'], ['customer-settings', 'Settings'],
+      ]}
+      secondaryLink={{ to: '/technician/application', label: 'Technician application' }}
+    >
+      {signOutError && <Alert variant="error" title="Could not sign out. Please try again." />}
+      <div className="grid items-start gap-5 xl:grid-cols-[minmax(0,1.1fr)_minmax(0,1fr)]">
+        <Card id="request-assistance" className="min-w-0 scroll-mt-4 p-4 sm:p-6">
+          <div className="flex items-start gap-3">
+            <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800"><MapPin size={21} aria-hidden /></span>
+            <div>
+              <h2 className="text-xl font-bold text-brand-navy">Request assistance</h2>
+              <p className="mt-1 text-sm text-slate-600">Choose a service and review your quote before booking.</p>
+            </div>
           </div>
+          {towUnavailable && <Alert variant="warning" title="Towing is currently unavailable." />}
+          {categories.isPending && <p className="mt-4 text-slate-600" role="status">Loading services…</p>}
+          {categories.isError && <div className="mt-4"><Alert variant="error" title="Could not load services."><Button size="sm" variant="outline" onClick={() => void categories.refetch()}>Retry services</Button></Alert></div>}
+          {categories.isSuccess && (activeCategories.length
+            ? <RequestForm key={followup?.id ?? 'new'} customerId={customerId} categories={activeCategories}
+              vehicles={vehicles.data ?? []} followup={followup} onLeaveFollowup={() => setFollowup(null)} />
+            : <p className="mt-4 text-slate-600">No services are currently available.</p>)}
+        </Card>
+        <div className="min-w-0 space-y-6">
+          <CustomerRequests customerId={customerId} categories={categories.data ?? []} onTowFollowup={startTowFollowup} />
+          <Card id="saved-vehicles" className="scroll-mt-4 p-4 sm:p-6">
+            <h2 className="flex items-center gap-3 text-xl font-bold text-brand-navy">
+              <span className="grid size-10 shrink-0 place-items-center rounded-xl bg-sky-100 text-sky-800"><CarFront size={20} aria-hidden /></span>
+              Saved vehicles
+            </h2>
+            {vehicles.isPending && <p className="mt-4 text-slate-600" role="status">Loading vehicles…</p>}
+            {vehicles.isError && <div className="mt-4"><Alert variant="error" title="Could not load your vehicles."><Button size="sm" variant="outline" onClick={() => void vehicles.refetch()}>Retry vehicles</Button></Alert></div>}
+            {vehicles.isSuccess && (vehicles.data.length ? (
+              <ul className="mt-3 divide-y divide-slate-200">
+                {vehicles.data.map((vehicle) => (
+                  <li key={vehicle.id} className="flex flex-wrap items-center justify-between gap-2 py-2">
+                    <div><p className="font-semibold text-brand-navy">{vehicle.make} {vehicle.model}</p>
+                    <p className="text-sm text-slate-600">{vehicle.registration_number ?? vehicle.vehicle_type}</p></div>
+                    <div className="flex gap-1">
+                      <Button size="sm" variant="ghost" aria-label={`Edit ${vehicle.make} ${vehicle.model}`} onClick={() => {
+                        setVehicleNotice('')
+                        setEditing(vehicle)
+                      }}>Edit</Button>
+                      <Button size="sm" variant="ghost" aria-label={`Remove ${vehicle.make} ${vehicle.model}`} onClick={() => {
+                        removeVehicle.reset()
+                        setVehicleNotice('')
+                        setRemoving(vehicle)
+                      }}>Remove</Button>
+                    </div>
+                  </li>
+                ))}
+              </ul>
+            ) : <p className="mt-4 text-slate-600">You haven’t saved a vehicle yet.</p>)}
+            {removeVehicle.isError && <Alert variant="error" title="Could not remove your vehicle." />}
+            {vehicleNotice && <Alert variant="success" title={vehicleNotice} />}
+            <VehicleForm key={editing?.id ?? 'new'} customerId={customerId} editing={editing}
+              onCancel={() => setEditing(null)} onSaved={() => {
+                setEditing(null)
+                setVehicleNotice('Vehicle saved.')
+              }} />
+            <ConfirmDialog open={removing !== null} title="Remove saved vehicle?"
+              description={`Remove ${removing?.make ?? ''} ${removing?.model ?? ''} from your saved vehicles? Existing requests will stay in your history.`}
+              confirmLabel="Remove vehicle" variant="danger" loading={removeVehicle.isPending}
+              onClose={() => setRemoving(null)} onConfirm={() => {
+                if (removing) removeVehicle.mutate(removing.id)
+              }} />
+          </Card>
+          <CustomerSettings profile={{ ...profile, ...customerSettings }} email={user?.email ?? ''} onSaved={setCustomerSettings} />
         </div>
       </div>
-    </main>
+    </DashboardLayout>
   )
 }
 

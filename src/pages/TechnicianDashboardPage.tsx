@@ -5,7 +5,7 @@ import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient
 import { useAuth } from '../auth/useAuth'
 import LiveConnection from '../components/common/LiveConnection'
 import { useDashboardRealtime } from '../lib/useDashboardRealtime'
-import BrandLogo from '../components/common/BrandLogo'
+import DashboardLayout from '../components/layout/DashboardLayout'
 import TechnicianJobs from '../components/common/TechnicianJobs'
 import TechnicianServices from '../components/common/TechnicianServices'
 import Alert from '../components/ui/Alert'
@@ -195,61 +195,64 @@ function TechnicianWorkspace({ applicationOnly }: { applicationOnly: boolean }) 
   const status = application.data?.status
   const canManageWorkspace = status === 'approved' && profile?.role === 'technician'
 
-  return (
-    <main className="min-h-screen bg-slate-50">
-      <header className="border-b border-slate-200 bg-white">
-        <div className="mx-auto flex max-w-3xl items-center justify-between gap-4 px-4 py-4 sm:px-6">
-          <BrandLogo size="sm" showTagline={false} />
-          <Button size="sm" variant="outline" onClick={() => {
-            setSignOutError(false)
-            void signOut().catch(() => setSignOutError(true))
-          }}>Sign out</Button>
-        </div>
-      </header>
-      <div className="mx-auto max-w-3xl space-y-6 px-4 py-8 sm:px-6">
-        <h1 className="text-3xl font-extrabold text-brand-navy">
-          {applicationOnly ? 'Technician application' : 'Technician Dashboard'}
-        </h1>
-        {!applicationOnly && <LiveConnection status={connection} />}
-        {signOutError && <Alert variant="error" title="Could not sign out. Please try again." />}
-        <Card className="space-y-4">
-          <div className="flex flex-wrap items-center justify-between gap-3">
-            <h2 className="text-xl font-bold text-brand-navy">Application status</h2>
-            <Button size="sm" variant="outline" loading={application.isFetching} onClick={() => void application.refetch()}>Refresh status</Button>
-          </div>
-          {application.isPending && <p role="status" className="text-sm text-slate-600">Loading application status…</p>}
-          {application.isError && <Alert variant="error" title="Could not load your application status." />}
-          {application.isSuccess && (
+  const applicationCard = (
+    <Card id="application-status" className="scroll-mt-5 space-y-4">
+      <div className="flex flex-wrap items-center justify-between gap-3">
+        <h2 className="text-xl font-bold text-brand-navy">Application status</h2>
+        <Button size="sm" variant="outline" loading={application.isFetching} onClick={() => void application.refetch()}>Refresh status</Button>
+      </div>
+      {application.isPending && <p role="status" className="text-sm text-slate-600">Loading application status…</p>}
+      {application.isError && <Alert variant="error" title="Could not load your application status." />}
+      {application.isSuccess && (
+        <>
+          {status === 'approved' && (
             <>
-              {status === 'approved' && (
-                <>
-                  <StatusBadge status="verified" label="Approved" />
-                  {profile?.role !== 'technician' && (
-                    <p className="text-sm text-slate-600">Sign in again after your technician access is activated.</p>
-                  )}
-                  {applicationOnly && canManageWorkspace && (
-                    <Link className="block text-sm font-semibold text-emerald-800 hover:underline" to="/technician/dashboard">Open technician dashboard</Link>
-                  )}
-                </>
+              <StatusBadge status="verified" label="Approved" />
+              {profile?.role !== 'technician' && (
+                <p className="text-sm text-slate-600">Sign in again after your technician access is activated.</p>
               )}
-              {status === 'pending' && <StatusBadge status="pending" label="Awaiting approval" />}
-              {status === 'rejected' && <StatusBadge status="rejected" label="Application declined" />}
-              {!status && <p className="text-sm text-slate-600">There is no technician application for this account.</p>}
+              {applicationOnly && canManageWorkspace && (
+                <Link className="block text-sm font-semibold text-emerald-800 hover:underline" to="/technician/dashboard">Open technician dashboard</Link>
+              )}
             </>
           )}
-        </Card>
-        {!applicationOnly && canManageWorkspace && profile && (
-          <>
-            <TechnicianAvailability technicianId={profile.id} />
-            <TechnicianServices technicianId={profile.id} />
+          {status === 'pending' && <StatusBadge status="pending" label="Awaiting approval" />}
+          {status === 'rejected' && <StatusBadge status="rejected" label="Application declined" />}
+          {!status && <p className="text-sm text-slate-600">There is no technician application for this account.</p>}
+        </>
+      )}
+    </Card>
+  )
+
+  return (
+    <DashboardLayout
+      title={applicationOnly ? 'Technician application' : 'Technician Dashboard'}
+      status={!applicationOnly && <LiveConnection status={connection} />}
+      sections={!applicationOnly && canManageWorkspace
+        ? [['technician-jobs', 'Offers and jobs'], ['availability', 'Availability'], ['service-rates', 'Services and rates'], ['application-status', 'Application status']]
+        : undefined}
+      onSignOut={() => {
+        setSignOutError(false)
+        void signOut().catch(() => setSignOutError(true))
+      }}
+    >
+      {signOutError && <Alert variant="error" title="Could not sign out. Please try again." />}
+      {!applicationOnly && canManageWorkspace && profile ? (
+        <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1.4fr)_minmax(0,1fr)]">
+          <section id="technician-jobs" aria-label="Offers and jobs" className="min-w-0 scroll-mt-5 space-y-6">
             <TechnicianJobs technicianId={profile.id} />
-          </>
-        )}
-        {applicationOnly && profile?.role === 'user' && (
-          <Link className="text-sm font-semibold text-emerald-800 hover:underline" to="/dashboard">Back to customer dashboard</Link>
-        )}
-      </div>
-    </main>
+          </section>
+          <div className="min-w-0 space-y-6">
+            <div id="availability" className="scroll-mt-5"><TechnicianAvailability technicianId={profile.id} /></div>
+            <div id="service-rates" className="scroll-mt-5"><TechnicianServices technicianId={profile.id} /></div>
+            {applicationCard}
+          </div>
+        </div>
+      ) : applicationCard}
+      {applicationOnly && profile?.role === 'user' && (
+        <Link className="text-sm font-semibold text-emerald-800 hover:underline" to="/dashboard">Back to customer dashboard</Link>
+      )}
+    </DashboardLayout>
   )
 }
 
