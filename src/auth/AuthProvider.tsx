@@ -2,6 +2,7 @@ import {
   useCallback,
   useEffect,
   useMemo,
+  useRef,
   useState,
   type ReactNode,
 } from 'react'
@@ -15,143 +16,94 @@ interface AuthProviderProps {
   children: ReactNode
 }
 
+interface ProfileResult {
+  userId: string
+  profile: UserProfile | null
+  loading: boolean
+}
+
 export function AuthProvider({ children }: AuthProviderProps) {
   const [session, setSession] = useState<Session | null>(null)
-  const [profile, setProfile] = useState<UserProfile | null>(null)
   const [loading, setLoading] = useState(true)
-  const [profileLoading, setProfileLoading] = useState(false)
-
+  const [profileResult, setProfileResult] = useState<ProfileResult | null>(null)
+  const profileRequest = useRef<AbortController | null>(null)
   const userId = session?.user.id ?? null
 
   useEffect(() => {
-    let mounted = true
-
     const {
       data: { subscription },
-    } = supabase.auth.onAuthStateChange((_event, currentSession) => {
-      if (mounted) {
-        setSession(currentSession)
-        setLoading(false)
+    } = supabase.auth.onAuthStateChange((event, currentSession) => {
+      if (event === 'SIGNED_OUT') {
+        profileRequest.current?.abort()
+        setProfileResult(null)
       }
+
+      setSession(currentSession)
+      setLoading(false)
     })
 
-    supabase.auth
-      .getSession()
-      .then(({ data, error }) => {
-        if (!mounted) return
-
-        if (error) {
-          console.error('Unable to restore authentication session:', error)
-          setSession(null)
-        } else {
-          setSession(data.session)
-        }
-
-        setLoading(false)
-      })
-      .catch((error: unknown) => {
-        if (!mounted) return
-
-        console.error('Authentication initialization failed:', error)
-        setSession(null)
-        setLoading(false)
-      })
-
-    return () => {
-      mounted = false
-      subscription.unsubscribe()
-    }
+    return () => subscription.unsubscribe()
   }, [])
 
-  useEffect(() => {
-    let active = true
-
-    if (!userId) {
-      return () => {
-        active = false
-      }
-    }
-
-    async function loadProfile() {
-      setProfileLoading(true)
-
-      try {
-        const { data, error } = await supabase
-          .from('user_profiles')
-          .select(
-            'id, full_name, phone, avatar_url, role, created_at, updated_at',
-          )
-          .eq('id', userId)
-          .maybeSingle()
-
-        if (!active) return
-
-        if (error) {
-          console.error('Unable to load user profile:', error)
-          setProfile(null)
-        } else {
-          setProfile(data as UserProfile | null)
-        }
-      } finally {
-        if (active) {
-          setProfileLoading(false)
-        }
-      }
-    }
-
-    void loadProfile().catch((error: unknown) => {
-      if (active) {
-        console.error('Profile loading failed:', error)
-        setProfile(null)
-        setProfileLoading(false)
-      }
-    })
-
-    return () => {
-      active = false
-    }
-  }, [userId])
-
   const refreshProfile = useCallback(async () => {
-    if (!userId) {
-      setProfile(null)
-      return
-    }
+    if (!userId) return
 
-    setProfileLoading(true)
+    profileRequest.current?.abort()
+    const controller = new AbortController()
+    profileRequest.current = controller
+    setProfileResult({ userId, profile: null, loading: true })
+
+    let profile: UserProfile | null = null
 
     try {
       const { data, error } = await supabase
         .from('user_profiles')
-        .select(
-          'id, full_name, phone, avatar_url, role, created_at, updated_at',
-        )
+        .select('id, full_name, phone, avatar_url, role, created_at, updated_at')
         .eq('id', userId)
+        .abortSignal(controller.signal)
         .maybeSingle()
 
-      if (error) {
-        throw error
-      }
+      if (error) throw error
 
-      setProfile(data as UserProfile | null)
-    } catch (error) {
-      console.error('Unable to refresh user profile:', error)
-      throw error
+      if (data) {
+        const { role } = data
+        if (role === 'user' || role === 'technician' || role === 'admin') {
+          profile = { ...data, role }
+        }
+      }
+    } catch (error: unknown) {
+      if (!controller.signal.aborted) {
+        console.error('Unable to load account profile:', error)
+      }
     } finally {
-      setProfileLoading(false)
+      if (!controller.signal.aborted) {
+        setProfileResult({ userId, profile, loading: false })
+      }
     }
   }, [userId])
+
+  useEffect(() => {
+    let active = true
+    queueMicrotask(() => {
+      if (active) void refreshProfile()
+    })
+    return () => {
+      active = false
+      profileRequest.current?.abort()
+    }
+  }, [refreshProfile])
 
   const signOut = useCallback(async () => {
     const { error } = await supabase.auth.signOut()
 
-    if (error) {
-      throw error
-    }
+    if (error) throw error
   }, [])
 
-  const currentProfile =
-    userId && profile?.id === userId ? profile : null
+  const currentProfile = userId && profileResult?.userId === userId
+    ? profileResult.profile
+    : null
+  const profileLoading = userId !== null
+    && (profileResult?.userId !== userId || profileResult.loading)
 
   const value = useMemo(
     () => ({
@@ -160,19 +112,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       profile: currentProfile,
       role: currentProfile?.role ?? null,
       loading,
-      profileLoading: Boolean(userId) && profileLoading,
-      refreshProfile,
-      signOut,
-    }),
-    [
-      session,
-      currentProfile,
-      loading,
-      userId,
       profileLoading,
       refreshProfile,
       signOut,
-    ],
+    }),
+    [session, currentProfile, loading, profileLoading, refreshProfile, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

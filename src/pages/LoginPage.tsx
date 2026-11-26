@@ -29,38 +29,50 @@ const loginSchema = z.object({
 
 type LoginFormValues = z.infer<typeof loginSchema>
 
+const loopbackHosts = ['localhost', '127.0.0.1', '[::1]']
+const localDemoPasswords = import.meta.env.DEV
+  && loopbackHosts.includes(window.location.hostname)
+  && loopbackHosts.includes(new URL(import.meta.env.VITE_SUPABASE_URL).hostname)
+  ? {
+    user: import.meta.env.VITE_LOCAL_DEMO_CUSTOMER_PASSWORD as string | undefined,
+    technician: import.meta.env.VITE_LOCAL_DEMO_TECHNICIAN_PASSWORD as string | undefined,
+    admin: import.meta.env.VITE_LOCAL_DEMO_ADMIN_PASSWORD as string | undefined,
+  }
+  : null
+
 const demoAccounts = [
   {
+    role: 'user',
     label: 'Demo Customer',
     description: 'Test the customer experience',
     email: 'demo.user@example.com',
-    password: 'NexRoadUser2026!',
     icon: UserRound,
   },
   {
+    role: 'technician',
     label: 'Demo Technician',
     description: 'Test the technician dashboard',
     email: 'demo.technician@example.com',
-    password: 'NexRoadTech2026!',
     icon: Wrench,
   },
   {
+    role: 'admin',
     label: 'Demo Admin',
     description: 'Test administration features',
     email: 'demo.admin@example.com',
-    password: 'NexRoadAdmin2026!',
     icon: ShieldCheck,
   },
-]
+] as const
 
 export default function LoginPage() {
-  const { user, loading: authLoading } = useAuth()
+  const { user, role, profileLoading, loading: authLoading } = useAuth()
   const [showPassword, setShowPassword] = useState(false)
 
   const {
     register,
     handleSubmit,
     setError,
+    clearErrors,
     setValue,
     formState: { errors, isSubmitting },
   } = useForm<LoginFormValues>({
@@ -71,13 +83,16 @@ export default function LoginPage() {
     },
   })
 
-  function selectDemoAccount(email: string, password: string) {
-    setValue('email', email, { shouldValidate: true })
-    setValue('password', password, { shouldValidate: true })
-    setError('root.server', { message: '' })
+  function selectDemoAccount(account: (typeof demoAccounts)[number]) {
+    const password = localDemoPasswords?.[account.role] ?? ''
+    clearErrors('root.server')
+    clearErrors('password')
+    setValue('email', account.email, { shouldValidate: true })
+    setValue('password', password, { shouldDirty: true })
+    setShowPassword(Boolean(password))
   }
 
-  if (authLoading) {
+  if (authLoading || profileLoading) {
     return (
       <div className="flex min-h-screen items-center justify-center text-sm text-slate-500">
         Loading your account...
@@ -85,7 +100,14 @@ export default function LoginPage() {
     )
   }
 
-  if (user) return <Navigate to="/account" replace />
+  if (user) {
+    const dashboard = role === 'admin'
+      ? '/admin/dashboard'
+      : role === 'technician'
+        ? '/technician/dashboard'
+        : role === 'user' ? '/dashboard' : '/account'
+    return <Navigate to={dashboard} replace />
+  }
 
   async function onSubmit(values: LoginFormValues) {
     try {
@@ -184,13 +206,14 @@ export default function LoginPage() {
               Try NexRoad Demo
             </p>
             <p className="mt-1 text-xs leading-5 text-slate-500">
-              Choose a demo account to fill in its login credentials.
+              Try a role with sample data. No sign-in is required.
             </p>
           </div>
 
           <div className="space-y-3">
             {demoAccounts.map((account) => {
               const Icon = account.icon
+              const fillsPassword = Boolean(localDemoPasswords?.[account.role])
 
               return (
                 <div
@@ -211,24 +234,27 @@ export default function LoginPage() {
                     </div>
                   </div>
 
-                  <button
-                    type="button"
-                    onClick={() =>
-                      selectDemoAccount(account.email, account.password)
-                    }
-                    className="shrink-0 rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
-                  >
-                    Use account
-                  </button>
+                  <div className="flex shrink-0 flex-col items-end gap-2">
+                    <Link
+                      to={`/demo/${account.role === 'user' ? 'customer' : account.role}`}
+                      aria-label={`Open ${account.label}`}
+                      className="rounded-lg bg-brand-navy px-3 py-2 text-xs font-semibold text-white transition hover:bg-slate-700"
+                    >
+                      Open demo
+                    </Link>
+                    {fillsPassword && (
+                      <button type="button" onClick={() => selectDemoAccount(account)}
+                        aria-label={`Fill local sign-in for ${account.label}`}
+                        className="text-xs font-semibold text-emerald-800 hover:underline">
+                        Fill local sign-in
+                      </button>
+                    )}
+                  </div>
                 </div>
               )
             })}
           </div>
 
-          <p className="mt-4 text-xs leading-5 text-slate-500">
-            Demo accounts must first be created in your Supabase project. These
-            credentials are intended only for this prototype.
-          </p>
         </Card>
       </div>
 

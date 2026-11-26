@@ -30,3 +30,15 @@ If you are developing a production application, we recommend enabling type-aware
 ```
 
 See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+
+## Local demo login
+
+Create dedicated demo users in your local Supabase Auth instance with the emails shown on the login page. Use their local test passwords in the ignored `.env.development.local` file.
+
+```dotenv
+VITE_LOCAL_DEMO_CUSTOMER_PASSWORD=
+VITE_LOCAL_DEMO_TECHNICIAN_PASSWORD=
+VITE_LOCAL_DEMO_ADMIN_PASSWORD=
+```
+
+Restart Vite and open the app on localhost. When the app and Supabase both use loopback URLs, a configured demo button fills and displays that account's password. Use the eye button to hide it again. The public app offers password-free role previews with sample data. Keep production credentials out of all `VITE_*` variables.

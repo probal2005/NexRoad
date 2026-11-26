@@ -5,13 +5,16 @@ import ProtectedRoute from '../components/auth/ProtectedRoute'
 
 import AboutPage from '../pages/AboutPage'
 import ContactPage from '../pages/ContactPage'
+import CustomerDashboardPage from '../pages/CustomerDashboardPage'
 import DashboardEntryPage from '../pages/DashboardEntryPage'
+import DemoPreviewPage from '../pages/DemoPreviewPage'
 import HomePage from '../pages/HomePage'
 import HowItWorksPage from '../pages/HowItWorksPage'
 import LoginPage from '../pages/LoginPage'
 import NotFoundPage from '../pages/NotFoundPage'
 import RegisterPage from '../pages/RegisterPage'
 import ServicesPage from '../pages/ServicesPage'
+import TechnicianDashboardPage from '../pages/TechnicianDashboardPage'
 import UnauthorizedPage from '../pages/UnauthorizedPage'
 
 const router = createBrowserRouter([
@@ -45,12 +48,14 @@ const router = createBrowserRouter([
     element: <RegisterPage />,
   },
 
+  { path: '/demo/:role', element: <DemoPreviewPage /> },
+
   // Authenticated user route
   {
     path: '/dashboard',
     element: (
       <RoleProtectedRoute allowedRole="user">
-        <DashboardEntryPage />
+        <CustomerDashboardPage />
       </RoleProtectedRoute>
     ),
   },
@@ -60,8 +65,17 @@ const router = createBrowserRouter([
     path: '/technician/dashboard',
     element: (
       <RoleProtectedRoute allowedRole="technician">
-        <DashboardEntryPage />
+        <TechnicianDashboardPage />
       </RoleProtectedRoute>
+    ),
+  },
+
+  {
+    path: '/technician/application',
+    element: (
+      <ProtectedRoute>
+        <TechnicianDashboardPage applicationOnly />
+      </ProtectedRoute>
     ),
   },
 
