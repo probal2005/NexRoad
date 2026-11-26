@@ -116,6 +116,15 @@ test("Live tracking disconnect and recovery", async ({ page, baseURL: base }) =>
   await page.getByLabel('Tow destination').fill('Sector 22 garage')
   await page.getByLabel('Drop-off latitude').fill('30.72')
   await page.getByLabel('Drop-off longitude').fill('76.76')
+  const form = page.locator('#request-assistance form')
+  for (const width of [320, 1440]) {
+    await page.setViewportSize({ width, height: 844 })
+    assert.equal(await form.evaluate(element => element.scrollWidth <= element.clientWidth), true)
+    for (const label of ['Service and vehicle', 'Pickup location', 'Service details and payment']) {
+      await form.getByRole('group', { name: label, exact: true }).waitFor()
+    }
+  }
+  await page.setViewportSize({ width: 390, height: 844 })
   await page.getByRole('button',{name:'Review price'}).click()
   await page.getByRole('alertdialog').getByRole('button',{name:'Send request'}).click()
   await page.getByText(/A follow-up tow is already booked/).waitFor()

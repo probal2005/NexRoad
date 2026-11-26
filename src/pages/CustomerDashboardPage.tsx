@@ -1,6 +1,6 @@
 import { lazy, Suspense, useState, type SubmitEvent } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
-import { ArrowRight, CarFront, ClipboardList, Crosshair, LifeBuoy, MapPin } from 'lucide-react'
+import { ArrowRight, CarFront, ClipboardList, Crosshair, LifeBuoy, MapPin, Wallet } from 'lucide-react'
 
 import roadsideCover from '../assets/customer-roadside.webp'
 import type { UserProfile } from '../auth/AuthContext'
@@ -148,22 +148,32 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
   }
 
   return (
-    <form key={formVersion} className="mt-5 space-y-4" onSubmit={submit}>
+    <form key={formVersion} className="@container mt-6 space-y-5" onSubmit={submit}>
       {followup && <Alert title="Follow-up towing">
         Pickup is copied from the mechanical booking. <Button size="sm" variant="ghost" disabled={request.isPending} onClick={onLeaveFollowup}>Exit follow-up</Button>
       </Alert>}
-      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
-        <legend className="px-2 text-sm font-bold text-brand-navy">Service and vehicle</legend>
-        <Select name="service-category" disabled={Boolean(followup)} label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
-        <Select name="request-vehicle" label="Vehicle (optional)" placeholder="Continue without a saved vehicle"
-          options={vehicles.map(({ id, make, model }) => ({ value: id, label: `${make} ${model}` }))} />
+      <fieldset className="min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/75 px-3 pt-2 pb-4 @sm:px-5 @sm:pb-5">
+        <legend className="max-w-full px-1">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-sm font-bold text-brand-navy">
+            <CarFront size={16} aria-hidden className="shrink-0 text-emerald-800" /> Service and vehicle
+          </span>
+        </legend>
+        <div className="grid gap-4 @lg:grid-cols-2">
+          <Select name="service-category" disabled={Boolean(followup)} label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
+          <Select name="request-vehicle" label="Vehicle (optional)" placeholder="Continue without a saved vehicle"
+            options={vehicles.map(({ id, make, model }) => ({ value: id, label: `${make} ${model}` }))} />
+        </div>
       </fieldset>
-      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
-        <legend className="px-2 text-sm font-bold text-brand-navy">Pickup location</legend>
+      <fieldset className="min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/75 px-3 pt-2 pb-4 @sm:px-5 @sm:pb-5">
+        <legend className="max-w-full px-1">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-sm font-bold text-brand-navy">
+            <MapPin size={16} aria-hidden className="shrink-0 text-emerald-800" /> Pickup location
+          </span>
+        </legend>
         <Input name="service-location" label="Pickup address or landmark" defaultValue={followup?.address} readOnly={Boolean(followup)} required minLength={3} maxLength={500} placeholder="e.g. Sector 17 bus stand, Chandigarh" />
-        {!followup && <div className="flex flex-wrap gap-2">
-          <Button variant="outline" size="sm" loading={locating} onClick={locate} leftIcon={<Crosshair size={15} />}>Use my location</Button>
-          <Button variant="outline" size="sm" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
+        {!followup && <div className="grid gap-2 @sm:grid-cols-2">
+          <Button variant="outline" className="min-h-11 bg-white" loading={locating} onClick={locate} leftIcon={<Crosshair size={15} />}>Use my location</Button>
+          <Button variant="outline" className="min-h-11 bg-white" leftIcon={<MapPin size={15} aria-hidden />} aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
             {showMap ? 'Hide pickup map' : 'Choose on map'}
           </Button>
         </div>}
@@ -175,15 +185,19 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
             </Suspense>
           </>
         )}
-        <div className="grid gap-3 min-[420px]:grid-cols-2">
+        <div className="grid gap-4 @sm:grid-cols-2">
           <Input name="latitude" label="Latitude" readOnly={Boolean(followup)} type="number" required min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} />
           <Input name="longitude" label="Longitude" readOnly={Boolean(followup)} type="number" required min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} />
         </div>
       </fieldset>
-      <fieldset className="min-w-0 space-y-3 rounded-xl border border-slate-200 px-3 pb-4 sm:px-4">
-        <legend className="px-2 text-sm font-bold text-brand-navy">Service details and payment</legend>
+      <fieldset className="min-w-0 space-y-4 rounded-2xl border border-slate-200 bg-slate-50/75 px-3 pt-2 pb-4 @sm:px-5 @sm:pb-5">
+        <legend className="max-w-full px-1">
+          <span className="inline-flex items-center gap-2 rounded-lg bg-white px-2 py-1 text-sm font-bold text-brand-navy">
+            <Wallet size={16} aria-hidden className="shrink-0 text-emerald-800" /> Service details and payment
+          </span>
+        </legend>
         {category?.slug === 'fuel' && (
-          <div className="grid gap-3 sm:grid-cols-2">
+          <div className="grid gap-4 @sm:grid-cols-2">
             <Select name="service-detail" label="Fuel type" required options={[
               { label: 'Petrol', value: 'Petrol' },
               { label: 'Diesel', value: 'Diesel' },
@@ -194,7 +208,7 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
         {category?.slug === 'towing' && (
           <div className="space-y-3">
             <Input key="tow-destination" name="service-detail" label="Tow destination" minLength={3} maxLength={500} required />
-            <div className="grid gap-3 min-[420px]:grid-cols-2">
+            <div className="grid gap-4 @sm:grid-cols-2">
               <Input name="destination-latitude" label="Drop-off latitude" type="number" required min={-90} max={90} step="any" />
               <Input name="destination-longitude" label="Drop-off longitude" type="number" required min={-180} max={180} step="any" />
             </div>
@@ -211,7 +225,11 @@ function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollow
       {locationError && <Alert variant="error" title={locationError} />}
 
       {request.isSuccess && <Alert variant="success" title="Request submitted." />}
-      <Button type="submit" loading={estimate.isPending || request.isPending} disabled={!categories.length || draft !== null} rightIcon={<ArrowRight size={16} aria-hidden />}>Review price</Button>
+      <div className="flex flex-col gap-3 border-t border-slate-200 pt-4 @sm:flex-row @sm:items-center @sm:justify-between">
+        <p className="text-sm text-slate-600">You’ll see the quote before sending your request.</p>
+        <Button type="submit" className="shrink-0" loading={estimate.isPending || request.isPending}
+          disabled={!categories.length || draft !== null} rightIcon={<ArrowRight size={16} aria-hidden />}>Review price</Button>
+      </div>
       <ConfirmDialog open={draft !== null} title="Confirm assistance request"
         description={`${category?.name ?? 'Roadside assistance'} at ${draft?.address ?? ''}. This quote is stored when you book.`}
         confirmLabel="Send request" cancelLabel="Keep editing" loading={request.isPending}
@@ -296,7 +314,7 @@ function VehicleForm({ customerId, editing, onCancel, onSaved }: {
         { value: 'motorcycle', label: 'Motorcycle' },
         { value: 'other', label: 'Other' },
       ]} />
-      <div className="grid gap-3 min-[420px]:grid-cols-2">
+      <div className="grid gap-4 @sm:grid-cols-2">
         <Input name="vehicle-make" label="Make" required maxLength={60} defaultValue={editing?.make} />
         <Input name="vehicle-model" label="Model" required maxLength={60} defaultValue={editing?.model} />
       </div>
@@ -393,7 +411,7 @@ function CustomerDashboard({ profile }: { profile: UserProfile }) {
             <span className="grid size-11 shrink-0 place-items-center rounded-xl bg-emerald-100 text-emerald-800"><MapPin size={21} aria-hidden /></span>
             <div>
               <h2 className="text-xl font-bold text-brand-navy">Request assistance</h2>
-              <p className="mt-1 text-sm text-slate-600">Choose a service and review your quote before booking.</p>
+              <p className="mt-1 text-sm text-slate-600">Fill in the pickup and service details.</p>
             </div>
           </div>
           {towUnavailable && <Alert variant="warning" title="Towing is currently unavailable." />}
