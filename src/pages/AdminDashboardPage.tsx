@@ -2,6 +2,7 @@ import { lazy, Suspense, useState, type SubmitEvent } from 'react'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { useAuth } from '../auth/useAuth'
+import AdminFuelPrices from '../components/common/AdminFuelPrices'
 import BrandLogo from '../components/common/BrandLogo'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
@@ -178,7 +179,8 @@ function AdminWorkspace() {
             </Card>
             <Card id="services" className="space-y-4">
               <h2 className={titleStyle}>Service categories and pricing</h2>
-              <p className={textStyle}>Default rates are saved for the pricing engine. Existing technician rates are used by the customer estimate.</p>
+              <p className={textStyle}>Rates are used for new customer quotes. Confirmed booking prices stay fixed.</p>
+              <AdminFuelPrices adminId={user?.id} />
               {data.categories.map((category) => (
                 <div key={category.id} className="space-y-4 rounded-xl border border-slate-200 p-4">
                   <form aria-label={`Category ${category.name}`} className="space-y-3"

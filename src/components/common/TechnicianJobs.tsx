@@ -137,7 +137,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
               {data.data.metrics.simulated_earnings === null ? 'Unavailable' : money.format(data.data.metrics.simulated_earnings)}
             </dd></div>
           </dl>
-          <p className="text-xs text-slate-600">Estimates use current rates and recorded approach distance. Jobs without rates are excluded.</p>
+          <p className="text-xs text-slate-600">Completed bookings use stored simulated charges. Older jobs use the listed rates when available.</p>
         </Card>
       )}
     </>

@@ -10,6 +10,30 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_price_snapshots: {
+        Row: { request_id: string; quote: Json; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{
+          foreignKeyName: 'booking_price_snapshots_request_id_fkey'
+          columns: ['request_id']
+          isOneToOne: true
+          referencedRelation: 'service_requests'
+          referencedColumns: ['id']
+        }]
+      }
+      booking_final_charges: {
+        Row: { request_id: string; total_inr: number; created_at: string }
+        Insert: never
+        Update: never
+        Relationships: [{
+          foreignKeyName: 'booking_final_charges_request_id_fkey'
+          columns: ['request_id']
+          isOneToOne: true
+          referencedRelation: 'booking_price_snapshots'
+          referencedColumns: ['request_id']
+        }]
+      }
       customer_request_feedback: {
         Row: { request_id: string; rating: number; comment: string | null; created_at: string }
         Insert: { request_id: string; rating: number; comment?: string | null }
@@ -445,6 +469,19 @@ export type Database = {
       }
     }
     Functions: {
+      quote_booking: { Args: { p_input: Json }; Returns: Json }
+      create_priced_booking: {
+        Args: { p_request_id: string; p_input: Json; p_expected_quote: Json }
+        Returns: string
+      }
+      admin_fuel_prices: {
+        Args: Record<never, never>
+        Returns: { fuel_type: string; unit_price_inr: number }[]
+      }
+      admin_set_fuel_price: {
+        Args: { p_fuel_type: string; p_unit_price_inr: number }
+        Returns: boolean
+      }
       retry_customer_matching: {
         Args: { p_request_id: string }
         Returns: string | null

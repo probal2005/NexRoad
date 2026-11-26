@@ -1,4 +1,4 @@
-import { useEffect, useRef } from 'react'
+import { useEffect, useId, useRef, type ReactNode } from 'react'
 import { AlertTriangle, X } from 'lucide-react'
 import Button from './Button'
 
@@ -6,6 +6,7 @@ type ConfirmDialogProps = {
   open: boolean
   title: string
   description: string
+  children?: ReactNode
   confirmLabel?: string
   cancelLabel?: string
   variant?: 'primary' | 'danger'
@@ -18,6 +19,7 @@ export default function ConfirmDialog({
   open,
   title,
   description,
+  children,
   confirmLabel = 'Confirm',
   cancelLabel = 'Cancel',
   variant = 'primary',
@@ -25,6 +27,7 @@ export default function ConfirmDialog({
   onConfirm,
   onClose,
 }: ConfirmDialogProps) {
+  const id = useId()
   const dialogRef = useRef<HTMLDivElement>(null)
 
   useEffect(() => {
@@ -62,10 +65,10 @@ export default function ConfirmDialog({
         ref={dialogRef}
         role="alertdialog"
         aria-modal="true"
-        aria-labelledby="confirm-dialog-title"
-        aria-describedby="confirm-dialog-description"
+        aria-labelledby={`${id}-title`}
+        aria-describedby={`${id}-description`}
         tabIndex={-1}
-        className="w-full max-w-md rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
+        className="max-h-[calc(100dvh-2rem)] w-full max-w-md overflow-y-auto rounded-2xl border border-slate-200 bg-white p-6 shadow-2xl"
       >
         <div className="flex items-start justify-between">
           <div className="flex h-12 w-12 items-center justify-center rounded-xl bg-amber-50 text-amber-600">
@@ -84,18 +87,20 @@ export default function ConfirmDialog({
         </div>
 
         <h2
-          id="confirm-dialog-title"
+          id={`${id}-title`}
           className="mt-5 text-xl font-extrabold text-brand-navy"
         >
           {title}
         </h2>
 
         <p
-          id="confirm-dialog-description"
+          id={`${id}-description`}
           className="mt-3 text-sm leading-7 text-slate-600"
         >
           {description}
         </p>
+
+        {children && <div className="mt-4">{children}</div>}
 
         <div className="mt-7 flex flex-col-reverse gap-3 sm:flex-row sm:justify-end">
           <Button

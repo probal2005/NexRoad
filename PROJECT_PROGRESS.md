@@ -15,7 +15,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 7 | Technician dashboard implemented locally, including approval status, availability, service rates, opt-in one-time location sharing, offer responses, job progress and directions, mechanical outcomes, ratings and simulated earnings. Offer generation belongs to Phase 9. Hosted workflow depends on approved migrations. |
 | 8 | Admin Dashboard implemented. Includes application review, app suspension/reactivation, category and rate defaults, booking and simulated payment monitoring, a consent-based technician map, complaint handling, analytics, audit history and platform settings. Hosted verification requires approved migrations. |
 | 9 | Booking matching implemented with ranked offers, expiry, retry, privacy and concurrency checks. The production worker uses Supabase Cron. |
-| 10–15 | Pending. |
+| 10 | Server-calculated INR pricing implemented for all three services. Includes editable fuel prices and service rates, quote confirmation, immutable snapshots and final simulated charges. |
+| 11–15 | Pending. |
 
 ## Verification
 
@@ -45,3 +46,9 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 ## Phase 9 operation
 
 New requests dispatch immediately. The matching worker runs once a minute. It offers each booking to up to five nearest eligible technicians at a time, with a 90-second offer and a 15-minute total request window. A technician is offered each booking at most once. Distance is straight-line approach distance, and eligibility uses the configured platform radius and a location up to ten minutes old. Reconcile hosted migration ledger versions before using `supabase db push`.
+
+## Phase 10 pricing
+
+Administrators manage service rates and petrol and diesel prices. Initial values are simulation defaults. Fuel and mechanical assistance use a simulated 5 km approach. Towing uses straight-line pickup-to-drop-off distance. The database verifies the displayed quote at submission and saves it with the booking in one transaction. On completion, the simulated charge equals the original quote. Older bookings keep their existing data.
+
+Local PostgreSQL checks passed for all three estimates, stale and altered quotes, direct-insert denial, idempotent retries, snapshot access, rate changes and final charges. Chromium checked price confirmation and retry, saved breakdowns and admin fuel controls using simulated Supabase responses.

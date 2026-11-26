@@ -5,6 +5,8 @@ import { Link } from 'react-router-dom'
 
 import type { UserProfile } from '../auth/AuthContext'
 import { useAuth } from '../auth/useAuth'
+import BookingPrice from '../components/common/BookingPrice'
+import { readBookingQuote, type BookingQuote } from '../lib/bookingPricing'
 import BrandLogo from '../components/common/BrandLogo'
 import CustomerRequests from '../components/common/CustomerRequests'
 import CustomerSettings from '../components/common/CustomerSettings'
@@ -15,7 +17,7 @@ import ConfirmDialog from '../components/ui/ConfirmDialog'
 import Input from '../components/ui/Input'
 import Select from '../components/ui/Select'
 import Textarea from '../components/ui/Textarea'
-import type { Database } from '../lib/database.types'
+import type { Database, Json } from '../lib/database.types'
 import { supabase } from '../lib/supabase'
 
 type Tables = Database['public']['Tables']
@@ -42,20 +44,15 @@ function RequestForm({ customerId, categories, vehicles }: {
   const [showMap, setShowMap] = useState(false)
   const [formVersion, setFormVersion] = useState(0)
   const [categoryId, setCategoryId] = useState('')
-  const [draft, setDraft] = useState<Tables['service_requests']['Insert'] | null>(null)
+  const [draft, setDraft] = useState<{ id: string; input: Json; quote: BookingQuote; address: string } | null>(null)
   const category = categories.find(({ id }) => id === categoryId)
-  const estimate = useQuery({
-    queryKey: ['service-starting-price', categoryId],
-    enabled: Boolean(category),
-    queryFn: async ({ signal }) => {
-      const { data, error } = await supabase.from('technician_services')
-        .select('base_price, service_charge').eq('category_id', categoryId)
-        .eq('is_active', true).abortSignal(signal)
+  const estimate = useMutation({
+    mutationFn: async (input: Json) => {
+      const { data, error } = await supabase.rpc('quote_booking', { p_input: input })
       if (error) throw error
-      return data.reduce<number | null>((lowest, rate) => {
-        const amount = rate.base_price + rate.service_charge
-        return lowest === null ? amount : Math.min(lowest, amount)
-      }, null)
+      const quote = readBookingQuote(data)
+      if (!quote) throw new Error('Quote unavailable')
+      return quote
     },
   })
   const lat = Number(latitude)
@@ -63,8 +60,10 @@ function RequestForm({ customerId, categories, vehicles }: {
   const position: [number, number] | null = latitude && longitude
     && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null
   const request = useMutation({
-    mutationFn: async (values: Tables['service_requests']['Insert']) => {
-      const { error } = await supabase.from('service_requests').insert(values)
+    mutationFn: async (booking: NonNullable<typeof draft>) => {
+      const { error } = await supabase.rpc('create_priced_booking', {
+        p_request_id: booking.id, p_input: booking.input, p_expected_quote: booking.quote,
+      })
       if (error) throw error
     },
     onSuccess: () => Promise.all([
@@ -101,7 +100,7 @@ function RequestForm({ customerId, categories, vehicles }: {
 
   function submit(event: SubmitEvent<HTMLFormElement>) {
     event.preventDefault()
-    if (request.isPending) return
+    if (request.isPending || estimate.isPending || draft) return
     const form = event.currentTarget
     const data = new FormData(form)
     const address = field(data, 'service-location')
@@ -121,23 +120,22 @@ function RequestForm({ customerId, categories, vehicles }: {
       setLocationError('Complete the required service details.')
       return
     }
-    const serviceDetails = [
-      category?.slug === 'fuel' && `Fuel: ${detail}, ${fuelQuantity} L`,
-      category?.slug === 'towing' && `Tow destination: ${detail}`,
-      notes,
-    ].filter(Boolean).join('\n')
-    if (serviceDetails.length > 2000) {
-      setLocationError('Shorten the request details to 2,000 characters or fewer.')
-      return
-    }
-    setDraft({
-      customer_id: customerId,
+    const input: Json = {
       category_id: categoryId,
       vehicle_id: field(data, 'request-vehicle') || null,
       service_location: address,
       latitude: position[0],
       longitude: position[1],
-      issue_description: serviceDetails || null,
+      issue_description: notes || null,
+      fuel_type: category.slug === 'fuel' ? detail : null,
+      fuel_litres: category.slug === 'fuel' ? Number(fuelQuantity) : null,
+      destination: category.slug === 'towing' ? detail : null,
+      destination_latitude: category.slug === 'towing' ? Number(field(data, 'destination-latitude')) : null,
+      destination_longitude: category.slug === 'towing' ? Number(field(data, 'destination-longitude')) : null,
+    }
+    request.reset()
+    estimate.mutate(input, {
+      onSuccess: (quote) => setDraft({ id: crypto.randomUUID(), input, quote, address }),
     })
   }
 
@@ -171,25 +169,27 @@ function RequestForm({ customerId, categories, vehicles }: {
             { label: 'Petrol', value: 'Petrol' },
             { label: 'Diesel', value: 'Diesel' },
           ]} />
-          <Input name="fuel-quantity" label="Fuel quantity (litres)" type="number" min={1} step={1} required />
+          <Input name="fuel-quantity" label="Fuel quantity (litres)" type="number" min={1} max={50} step="0.01" required />
         </div>
       )}
-      {category?.slug === 'towing' && <Input key="tow-destination" name="service-detail" label="Tow destination" maxLength={500} required />}
+      {category?.slug === 'towing' && (
+        <div className="space-y-3">
+          <Input key="tow-destination" name="service-detail" label="Tow destination" minLength={3} maxLength={500} required />
+          <div className="grid grid-cols-2 gap-3">
+            <Input name="destination-latitude" label="Drop-off latitude" type="number" required min={-90} max={90} step="any" />
+            <Input name="destination-longitude" label="Drop-off longitude" type="number" required min={-180} max={180} step="any" />
+          </div>
+        </div>
+      )}
       <Textarea name="request-description" label={category?.slug === 'mechanical' ? 'Describe the mechanical issue' : 'Additional details (optional)'}
         required={category?.slug === 'mechanical'} maxLength={2000} rows={3} />
-      {category && (
-        <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600" role="status">
-          {estimate.isPending ? 'Checking listed service rates…' : estimate.data == null || estimate.isError
-            ? 'An estimate is unavailable for this service.'
-            : `Indicative starting rate ${new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' }).format(estimate.data)}. Distance, fuel and extras are priced separately.`}
-        </p>
-      )}
+      {estimate.isError && <Alert variant="error" title="Could not calculate an estimate. Check the service details and try again." />}
       {locationError && <Alert variant="error" title={locationError} />}
-      {request.isError && <Alert variant="error" title="Could not submit your request." />}
+
       {request.isSuccess && <Alert variant="success" title="Request submitted." />}
-      <Button type="submit" loading={request.isPending} disabled={!categories.length}>Review request</Button>
+      <Button type="submit" loading={estimate.isPending || request.isPending} disabled={!categories.length || draft !== null}>Review price</Button>
       <ConfirmDialog open={draft !== null} title="Confirm assistance request"
-        description={`${category?.name ?? 'Roadside assistance'} at ${draft?.service_location ?? ''}. Send this simulation request?`}
+        description={`${category?.name ?? 'Roadside assistance'} at ${draft?.address ?? ''}. This quote is stored when you book.`}
         confirmLabel="Send request" cancelLabel="Keep editing" loading={request.isPending}
         onClose={() => setDraft(null)} onConfirm={() => {
           if (!draft || request.isPending) return
@@ -201,9 +201,17 @@ function RequestForm({ customerId, categories, vehicles }: {
               setLatitude('')
               setLongitude('')
             },
-            onError: () => setDraft(null),
+            onError: (error) => {
+              if (error && typeof error === 'object' && 'code' in error && error.code === '22023') {
+                setDraft(null)
+                setLocationError('The price changed. Review the new quote and confirm again.')
+              }
+            },
           })
-        }} />
+        }}>
+        {draft && <BookingPrice quote={draft.quote} />}
+        {request.isError && <Alert variant="error" title="Could not submit your request. Try again or keep editing." />}
+      </ConfirmDialog>
     </form>
   )
 }

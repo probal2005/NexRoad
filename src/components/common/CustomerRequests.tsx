@@ -3,6 +3,8 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Bell, ClipboardList } from 'lucide-react'
 
 import { supabase } from '../../lib/supabase'
+import BookingPrice from './BookingPrice'
+import { formatRupees, readBookingQuote } from '../../lib/bookingPricing'
 import CustomerComplaintForm from './CustomerComplaintForm'
 import CustomerRequestFeedback from './CustomerRequestFeedback'
 import Alert from '../ui/Alert'
@@ -39,7 +41,7 @@ export default function CustomerRequests({ customerId, categories }: {
   const requests = useQuery({
     queryKey: ['customer-requests', customerId],
     queryFn: async ({ signal }) => {
-      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method'
+      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method, booking_price_snapshots(quote, booking_final_charges(total_inr))'
       const forStatuses = (states: string[]) => supabase.from('service_requests')
         .select(fields).eq('customer_id', customerId).in('request_status', states)
         .order('requested_at', { ascending: false }).order('id').abortSignal(signal)
@@ -133,7 +135,10 @@ export default function CustomerRequests({ customerId, categories }: {
           {requests.isPending && <p className="mt-4 text-slate-600" role="status">Loading requests…</p>}
           {data && (data.length ? (
             <ul className="mt-3 divide-y divide-slate-200">
-              {data.map((request) => (
+              {data.map((request) => {
+                const price = request.booking_price_snapshots
+                const quote = readBookingQuote(price?.quote)
+                return (
                 <li key={request.id} className="space-y-2 py-3">
                   <div className="flex flex-wrap items-start justify-between gap-2">
                     <div className="min-w-0">
@@ -167,9 +172,16 @@ export default function CustomerRequests({ customerId, categories }: {
                   )}
                   {['accepted', 'technician_arriving', 'in_progress', 'completed'].includes(request.request_status)
                     && <CustomerRequestFeedback requestId={request.id} completed={request.request_status === 'completed'} />}
+                  {quote && (
+                    <details className="space-y-2 text-sm text-brand-navy">
+                      <summary className="cursor-pointer font-semibold">Price breakdown · {formatRupees(quote.total_inr)}</summary>
+                      <BookingPrice quote={quote} finalCharge={price?.booking_final_charges?.total_inr} />
+                    </details>
+                  )}
                   <CustomerComplaintForm requestId={request.id} />
                 </li>
-              ))}
+                )
+              })}
             </ul>
           ) : <p className="mt-4 text-slate-600">{empty}</p>)}
         </Card>
