@@ -28,15 +28,41 @@ alter table public.booking_final_charges enable row level security;
 revoke all on public.booking_price_snapshots,public.booking_final_charges from public,anon,authenticated;
 grant select on public.booking_price_snapshots,public.booking_final_charges to authenticated;
 
--- Request RLS already checks customer ownership, assigned technicians and active accounts.
 create policy "Booking participants read price snapshots" on public.booking_price_snapshots
-  for select to authenticated using (exists (
-    select 1 from public.service_requests r where r.id = request_id
-  ));
+  for select to authenticated using (
+    (select nexroad_private.account_access_allowed()) and exists (
+      select 1 from public.service_requests r where r.id = booking_price_snapshots.request_id
+        and (
+          r.customer_id = (select auth.uid())
+          or (
+            r.assigned_technician_id = (select auth.uid())
+            and (select nexroad_private.is_approved_technician(auth.uid()))
+          )
+          or exists (
+            select 1 from public.user_profiles administrator
+            where administrator.id = (select auth.uid()) and administrator.role = 'admin'
+          )
+        )
+    )
+  );
+
 create policy "Booking participants read final charges" on public.booking_final_charges
-  for select to authenticated using (exists (
-    select 1 from public.service_requests r where r.id = request_id
-  ));
+  for select to authenticated using (
+    (select nexroad_private.account_access_allowed()) and exists (
+      select 1 from public.service_requests r where r.id = booking_final_charges.request_id
+        and (
+          r.customer_id = (select auth.uid())
+          or (
+            r.assigned_technician_id = (select auth.uid())
+            and (select nexroad_private.is_approved_technician(auth.uid()))
+          )
+          or exists (
+            select 1 from public.user_profiles administrator
+            where administrator.id = (select auth.uid()) and administrator.role = 'admin'
+          )
+        )
+    )
+  );
 
 create function nexroad_private.calculate_booking_quote(p_input jsonb)
 returns jsonb language plpgsql stable security definer set search_path=''
