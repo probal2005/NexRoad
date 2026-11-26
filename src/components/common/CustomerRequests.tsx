@@ -5,6 +5,7 @@ import { Bell, ClipboardList } from 'lucide-react'
 import { supabase } from '../../lib/supabase'
 import BookingPrice from './BookingPrice'
 import { formatRupees, readBookingQuote } from '../../lib/bookingPricing'
+import CustomerServiceWorkflow, { type TowFollowup } from './CustomerServiceWorkflow'
 import CustomerComplaintForm from './CustomerComplaintForm'
 import CustomerRequestFeedback from './CustomerRequestFeedback'
 import Alert from '../ui/Alert'
@@ -32,16 +33,17 @@ const dateTime = new Intl.DateTimeFormat('en-IN', {
   timeZone: 'Asia/Kolkata',
 })
 
-export default function CustomerRequests({ customerId, categories }: {
+export default function CustomerRequests({ customerId, categories, onTowFollowup }: {
   customerId: string
   categories: { id: string; name: string }[]
+  onTowFollowup: (booking: TowFollowup) => void
 }) {
   const [pendingCancellation, setPendingCancellation] = useState<string | null>(null)
   const [cancellationNotice, setCancellationNotice] = useState('')
   const requests = useQuery({
     queryKey: ['customer-requests', customerId],
     queryFn: async ({ signal }) => {
-      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method, booking_price_snapshots(quote, booking_final_charges(total_inr))'
+      const fields = 'id, category_id, request_status, service_location, requested_at, issue_description, payment_status, payment_method, latitude, longitude, service_outcome, booking_service_workflow!booking_service_workflow_request_id_fkey(*), booking_price_snapshots(quote, booking_final_charges(total_inr))'
       const forStatuses = (states: string[]) => supabase.from('service_requests')
         .select(fields).eq('customer_id', customerId).in('request_status', states)
         .order('requested_at', { ascending: false }).order('id').abortSignal(signal)
@@ -178,6 +180,10 @@ export default function CustomerRequests({ customerId, categories }: {
                       <BookingPrice quote={quote} finalCharge={price?.booking_final_charges?.total_inr} />
                     </details>
                   )}
+                  <CustomerServiceWorkflow customerId={customerId} workflow={request.booking_service_workflow ?? null}
+                    booking={{ id: request.id, address: request.service_location, latitude: request.latitude,
+                      longitude: request.longitude, status: request.request_status, outcome: request.service_outcome }}
+                    onTowFollowup={onTowFollowup} />
                   <CustomerComplaintForm requestId={request.id} />
                 </li>
                 )

@@ -16,7 +16,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 8 | Admin Dashboard implemented. Includes application review, app suspension/reactivation, category and rate defaults, booking and simulated payment monitoring, a consent-based technician map, complaint handling, analytics, audit history and platform settings. Hosted verification requires approved migrations. |
 | 9 | Booking matching implemented with ranked offers, expiry, retry, privacy and concurrency checks. The production worker uses Supabase Cron. |
 | 10 | Server-calculated INR pricing implemented for all three services. Includes editable fuel prices and service rates, quote confirmation, immutable snapshots and final simulated charges. |
-| 11–15 | Pending. |
+| 11 | Service workflows implemented for fuel delivery, mechanical diagnosis and towing. Includes simulated travel, job reports, customer confirmation, linked towing, feedback and a per-booking timeline. |
+| 12–15 | Pending. |
 
 ## Verification
 
@@ -52,3 +53,9 @@ New requests dispatch immediately. The matching worker runs once a minute. It of
 Administrators manage service rates and petrol and diesel prices. Initial values are simulation defaults. Fuel and mechanical assistance use a simulated 5 km approach. Towing uses straight-line pickup-to-drop-off distance. The database verifies the displayed quote at submission and saves it with the booking in one transaction. On completion, the simulated charge equals the original quote. Older bookings keep their existing data.
 
 Local PostgreSQL checks passed for all three estimates, stale and altered quotes, direct-insert denial, idempotent retries, snapshot access, rate changes and final charges. Chromium checked price confirmation and retry, saved breakdowns and admin fuel controls using simulated Supabase responses.
+
+## Phase 11 service simulation
+
+A technician starts travel, starts service on arrival and submits a report. The owner confirms the report to complete the booking and record the stored simulated charge. Fuel reports use the booked quantity, and towing reports record the drop-off. Mechanical reports support roadside repair, a garage recommendation or one linked, separately priced towing booking from the original pickup. The customer map animates a synthetic approach over 45 seconds. The service timeline combines status history with report and confirmation timestamps.
+
+Rollback-only local PostgreSQL tests verified all three service types, permission boundaries, duplicate protection and preserved charges. Chromium checked travel, service reports, confirmation, timeline and linked towing with simulated Supabase responses.

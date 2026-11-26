@@ -10,6 +10,35 @@ export type Json =
 export type Database = {
   public: {
     Tables: {
+      booking_service_workflow: {
+        Row: {
+          request_id: string
+          departed_at: string | null
+          arrived_at: string | null
+          submitted_at: string | null
+          confirmed_at: string | null
+          summary: string | null
+          fuel_litres: number | null
+          drop_off: string | null
+          mechanical_outcome: string | null
+          followup_request_id: string | null
+        }
+        Insert: never
+        Update: never
+        Relationships: [{
+          foreignKeyName: 'booking_service_workflow_request_id_fkey'
+          columns: ['request_id']
+          isOneToOne: true
+          referencedRelation: 'service_requests'
+          referencedColumns: ['id']
+        }, {
+          foreignKeyName: 'booking_service_workflow_followup_request_id_fkey'
+          columns: ['followup_request_id']
+          isOneToOne: true
+          referencedRelation: 'service_requests'
+          referencedColumns: ['id']
+        }]
+      }
       booking_price_snapshots: {
         Row: { request_id: string; quote: Json; created_at: string }
         Insert: never
@@ -469,6 +498,12 @@ export type Database = {
       }
     }
     Functions: {
+      submit_technician_service: { Args: { p_request_id: string; p_report: Json }; Returns: boolean }
+      confirm_customer_service: { Args: { p_request_id: string }; Returns: boolean }
+      create_towing_followup: {
+        Args: { p_parent_request_id: string; p_request_id: string; p_input: Json; p_expected_quote: Json }
+        Returns: string | null
+      }
       quote_booking: { Args: { p_input: Json }; Returns: Json }
       create_priced_booking: {
         Args: { p_request_id: string; p_input: Json; p_expected_quote: Json }

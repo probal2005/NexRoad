@@ -1,41 +1,36 @@
-import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
 import { supabase } from '../../lib/supabase'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
 import Card from '../ui/Card'
-import Select from '../ui/Select'
+import TechnicianServiceReport from './TechnicianServiceReport'
+import { readBookingQuote } from '../../lib/bookingPricing'
+import type { Json } from '../../lib/database.types'
 import StatusBadge from '../ui/StatusBadge'
 
 const jobSteps: Record<string, { status: string; label: string }> = {
   accepted: { status: 'technician_arriving', label: 'Start travelling' },
   technician_arriving: { status: 'in_progress', label: 'Start service' },
-  in_progress: { status: 'completed', label: 'Complete job' },
 }
-const outcomes = [
-  { value: 'roadside_repair', label: 'Repaired roadside' },
-  { value: 'garage_required', label: 'Garage required' },
-  { value: 'towing_required', label: 'Towing required' },
-]
 const money = new Intl.NumberFormat('en-IN', { style: 'currency', currency: 'INR' })
 const time = new Intl.DateTimeFormat('en-IN', { timeStyle: 'short', timeZone: 'Asia/Kolkata' })
 
 type Action =
   | { type: 'accept' | 'decline'; id: string }
-  | { type: 'advance'; id: string; status: string; outcome: string | null }
+  | { type: 'advance'; id: string; status: string }
+  | { type: 'report'; id: string; report: Json }
 
 export default function TechnicianJobs({ technicianId }: { technicianId: string }) {
   const client = useQueryClient()
-  const [mechanicalOutcome, setMechanicalOutcome] = useState<{ id: string; value: string } | null>(null)
   const dataKey = ['technician-jobs', technicianId]
   const data = useQuery({
     queryKey: dataKey,
     queryFn: async ({ signal }) => {
       const [jobs, offers, metrics] = await Promise.all([
         supabase.from('service_requests')
-          .select('id, request_status, service_location, latitude, longitude, issue_description, service_categories(slug, name)')
-          .eq('assigned_technician_id', technicianId).in('request_status', Object.keys(jobSteps))
+          .select('id, request_status, service_location, latitude, longitude, issue_description, service_categories(slug, name), booking_price_snapshots(quote), booking_service_workflow!booking_service_workflow_request_id_fkey(submitted_at)')
+          .eq('assigned_technician_id', technicianId).in('request_status', [...Object.keys(jobSteps), 'in_progress'])
           .abortSignal(signal),
         supabase.rpc('technician_matching_offers').abortSignal(signal),
         supabase.rpc('technician_performance').abortSignal(signal).single(),
@@ -49,9 +44,14 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
   })
   const change = useMutation({
     mutationFn: async (action: Action) => {
+      if (action.type === 'report') {
+        const { data, error } = await supabase.rpc('submit_technician_service', { p_request_id: action.id, p_report: action.report })
+        if (error) throw error
+        return Boolean(data)
+      }
       if (action.type === 'advance') {
         const { data, error } = await supabase.rpc('advance_technician_job', {
-          p_request_id: action.id, p_status: action.status, p_outcome: action.outcome,
+          p_request_id: action.id, p_status: action.status,
         })
         if (error) throw error
         return Boolean(data)
@@ -104,8 +104,8 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
             {data.data.jobs.length === 0 && <p className="text-sm text-slate-600">No active jobs.</p>}
             {data.data.jobs.map((job) => {
               const step = jobSteps[job.request_status]
-              const needsOutcome = step?.status === 'completed' && job.service_categories?.slug === 'mechanical'
-              const outcome = mechanicalOutcome?.id === job.id ? mechanicalOutcome.value : ''
+              const submitted = Boolean(job.booking_service_workflow?.submitted_at)
+              const quote = readBookingQuote(job.booking_price_snapshots?.quote)
 
               return (
                 <div key={job.id} className="space-y-3 rounded-xl border border-slate-200 p-4">
@@ -115,10 +115,12 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
                   {job.issue_description && <p className="whitespace-pre-line break-words text-sm text-slate-600">{job.issue_description}</p>}
                   <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.latitude},${job.longitude}`)}`}
                     target="_blank" rel="noreferrer" className="inline-flex text-sm font-semibold text-emerald-800 hover:underline">Open pickup directions</a>
-                  {needsOutcome && <Select name={`outcome-${job.id}`} label="Mechanical outcome" options={outcomes}
-                    value={outcome} onChange={(event) => setMechanicalOutcome({ id: job.id, value: event.target.value })} />}
-                  {step && <div><Button size="sm" disabled={change.isPending || (needsOutcome && !outcome)}
-                    onClick={() => change.mutate({ type: 'advance', id: job.id, status: step.status, outcome: needsOutcome ? outcome : null })}>{step.label}</Button></div>}
+                  {step && <div><Button size="sm" disabled={change.isPending}
+                    onClick={() => change.mutate({ type: 'advance', id: job.id, status: step.status })}>{step.label}</Button></div>}
+                  {job.request_status === 'in_progress' && (submitted
+                    ? <Alert title="Awaiting customer confirmation">The booking stays active until the customer confirms the report.</Alert>
+                    : <TechnicianServiceReport service={job.service_categories?.slug} bookedLitres={quote?.fuel_litres}
+                      pending={change.isPending} onSubmit={(report) => change.mutate({ type: 'report', id: job.id, report })} />)}
                 </div>
               )
             })}

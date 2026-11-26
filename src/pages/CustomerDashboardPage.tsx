@@ -9,6 +9,7 @@ import BookingPrice from '../components/common/BookingPrice'
 import { readBookingQuote, type BookingQuote } from '../lib/bookingPricing'
 import BrandLogo from '../components/common/BrandLogo'
 import CustomerRequests from '../components/common/CustomerRequests'
+import type { TowFollowup } from '../components/common/CustomerServiceWorkflow'
 import CustomerSettings from '../components/common/CustomerSettings'
 import Alert from '../components/ui/Alert'
 import Button from '../components/ui/Button'
@@ -31,19 +32,21 @@ function field(data: FormData, name: string) {
   return String(data.get(name) ?? '').trim()
 }
 
-function RequestForm({ customerId, categories, vehicles }: {
+function RequestForm({ customerId, categories, vehicles, followup, onLeaveFollowup }: {
   customerId: string
   categories: Category[]
   vehicles: Vehicle[]
+  followup: TowFollowup | null
+  onLeaveFollowup: () => void
 }) {
   const client = useQueryClient()
   const [locationError, setLocationError] = useState('')
   const [locating, setLocating] = useState(false)
-  const [latitude, setLatitude] = useState('')
-  const [longitude, setLongitude] = useState('')
+  const [latitude, setLatitude] = useState(followup ? String(followup.latitude) : '')
+  const [longitude, setLongitude] = useState(followup ? String(followup.longitude) : '')
   const [showMap, setShowMap] = useState(false)
   const [formVersion, setFormVersion] = useState(0)
-  const [categoryId, setCategoryId] = useState('')
+  const [categoryId, setCategoryId] = useState(followup ? categories.find(({ slug }) => slug === 'towing')?.id ?? '' : '')
   const [draft, setDraft] = useState<{ id: string; input: Json; quote: BookingQuote; address: string } | null>(null)
   const category = categories.find(({ id }) => id === categoryId)
   const estimate = useMutation({
@@ -61,10 +64,12 @@ function RequestForm({ customerId, categories, vehicles }: {
     && Math.abs(lat) <= 90 && Math.abs(lng) <= 180 ? [lat, lng] : null
   const request = useMutation({
     mutationFn: async (booking: NonNullable<typeof draft>) => {
-      const { error } = await supabase.rpc('create_priced_booking', {
-        p_request_id: booking.id, p_input: booking.input, p_expected_quote: booking.quote,
-      })
+      const args = { p_request_id: booking.id, p_input: booking.input, p_expected_quote: booking.quote }
+      const { data, error } = followup
+        ? await supabase.rpc('create_towing_followup', { ...args, p_parent_request_id: followup.id })
+        : await supabase.rpc('create_priced_booking', args)
       if (error) throw error
+      if (!data) throw new Error('Booking unavailable')
     },
     onSuccess: () => Promise.all([
       client.invalidateQueries({ queryKey: ['customer-requests', customerId] }),
@@ -141,16 +146,19 @@ function RequestForm({ customerId, categories, vehicles }: {
 
   return (
     <form key={formVersion} className="mt-5 space-y-4" onSubmit={submit}>
-      <Select name="service-category" label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
+      {followup && <Alert title="Follow-up towing">
+        Pickup is copied from the mechanical booking. <Button size="sm" variant="ghost" disabled={request.isPending} onClick={onLeaveFollowup}>Exit follow-up</Button>
+      </Alert>}
+      <Select name="service-category" disabled={Boolean(followup)} label="Service" required value={categoryId} onChange={(event) => setCategoryId(event.target.value)} options={categories.map(({ id, name }) => ({ value: id, label: name }))} />
       <Select name="request-vehicle" label="Vehicle (optional)" placeholder="Continue without a saved vehicle"
         options={vehicles.map(({ id, make, model }) => ({ value: id, label: `${make} ${model}` }))} />
-      <Input name="service-location" label="Pickup address or landmark" required minLength={3} maxLength={500} placeholder="e.g. Sector 17 bus stand, Chandigarh" />
-      <div className="flex flex-wrap gap-2">
+      <Input name="service-location" label="Pickup address or landmark" defaultValue={followup?.address} readOnly={Boolean(followup)} required minLength={3} maxLength={500} placeholder="e.g. Sector 17 bus stand, Chandigarh" />
+      {!followup && <div className="flex flex-wrap gap-2">
         <Button variant="outline" size="sm" loading={locating} onClick={locate} leftIcon={<Crosshair size={15} />}>Use my location</Button>
         <Button variant="outline" size="sm" aria-expanded={showMap} onClick={() => setShowMap(!showMap)}>
           {showMap ? 'Hide pickup map' : 'Choose on map'}
         </Button>
-      </div>
+      </div>}
       {showMap && (
         <>
           <p className="text-sm text-slate-600">Click the map to set the pickup point, or enter coordinates below.</p>
@@ -160,8 +168,8 @@ function RequestForm({ customerId, categories, vehicles }: {
         </>
       )}
       <div className="grid grid-cols-2 gap-3">
-        <Input name="latitude" label="Latitude" type="number" required min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} />
-        <Input name="longitude" label="Longitude" type="number" required min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} />
+        <Input name="latitude" label="Latitude" readOnly={Boolean(followup)} type="number" required min={-90} max={90} step="any" value={latitude} onChange={(event) => setLatitude(event.target.value)} />
+        <Input name="longitude" label="Longitude" readOnly={Boolean(followup)} type="number" required min={-180} max={180} step="any" value={longitude} onChange={(event) => setLongitude(event.target.value)} />
       </div>
       {category?.slug === 'fuel' && (
         <div className="grid gap-3 sm:grid-cols-2">
@@ -196,6 +204,7 @@ function RequestForm({ customerId, categories, vehicles }: {
           request.mutate(draft, {
             onSuccess: () => {
               setDraft(null)
+              if (followup) onLeaveFollowup()
               setFormVersion((version) => version + 1)
               setCategoryId('')
               setLatitude('')
@@ -325,7 +334,17 @@ function CustomerDashboard({ profile }: { profile: UserProfile }) {
       return data
     },
   })
+  const [followup, setFollowup] = useState<TowFollowup | null>(null)
+  const [towUnavailable, setTowUnavailable] = useState(false)
   const activeCategories = (categories.data ?? []).filter((category) => category.is_active)
+
+  function startTowFollowup(booking: TowFollowup) {
+    setTowUnavailable(!activeCategories.some(({ slug }) => slug === 'towing'))
+    if (!activeCategories.some(({ slug }) => slug === 'towing')) return
+    setFollowup(booking)
+    window.requestAnimationFrame(() => document.getElementById('request-assistance')?.scrollIntoView())
+  }
+
   return (
     <main className="min-h-screen bg-slate-50">
       <header className="border-b border-slate-200 bg-white">
@@ -352,14 +371,16 @@ function CustomerDashboard({ profile }: { profile: UserProfile }) {
         <div className="grid items-start gap-6 lg:grid-cols-[1fr_1fr]">
           <Card id="request-assistance" className="scroll-mt-4">
             <h2 className="flex items-center gap-2 text-xl font-bold text-brand-navy"><LifeBuoy size={21} /> Request assistance</h2>
+            {towUnavailable && <Alert variant="warning" title="Towing is currently unavailable." />}
             {categories.isPending && <p className="mt-4 text-slate-600" role="status">Loading services…</p>}
             {categories.isError && <div className="mt-4"><Alert variant="error" title="Could not load services."><Button size="sm" variant="outline" onClick={() => void categories.refetch()}>Retry services</Button></Alert></div>}
             {categories.isSuccess && (activeCategories.length
-              ? <RequestForm customerId={customerId} categories={activeCategories} vehicles={vehicles.data ?? []} />
+              ? <RequestForm key={followup?.id ?? 'new'} customerId={customerId} categories={activeCategories}
+                vehicles={vehicles.data ?? []} followup={followup} onLeaveFollowup={() => setFollowup(null)} />
               : <p className="mt-4 text-slate-600">No services are currently available.</p>)}
           </Card>
           <div className="space-y-6">
-            <CustomerRequests customerId={customerId} categories={categories.data ?? []} />
+            <CustomerRequests customerId={customerId} categories={categories.data ?? []} onTowFollowup={startTowFollowup} />
             <Card id="saved-vehicles" className="scroll-mt-4">
               <h2 className="flex items-center gap-2 text-xl font-bold text-brand-navy"><CarFront size={21} /> Saved vehicles</h2>
               {vehicles.isPending && <p className="mt-4 text-slate-600" role="status">Loading vehicles…</p>}
