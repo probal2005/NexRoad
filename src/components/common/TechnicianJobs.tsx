@@ -1,3 +1,4 @@
+import { ClipboardList, MapPin } from 'lucide-react'
 import { useState } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
@@ -79,9 +80,12 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
 
   return (
     <>
-      <Card className="space-y-4">
+      <Card padding="sm" className="space-y-4 sm:p-5">
         <div className="flex flex-wrap items-center justify-between gap-3">
-          <h2 className="text-xl font-bold text-brand-navy">Offers and active jobs</h2>
+          <h2 className="flex items-center gap-3 text-xl font-bold text-brand-navy">
+            <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-800"><ClipboardList size={18} aria-hidden /></span>
+            Offers and active jobs
+          </h2>
           <Button size="sm" variant="outline" loading={data.isFetching} onClick={() => void data.refetch()}>Refresh jobs</Button>
         </div>
         {data.isPending && <p role="status" className="text-sm text-slate-600">Loading jobs…</p>}
@@ -98,7 +102,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
             <p aria-live="polite" className="text-sm text-slate-600">{data.data.offers.length
               ? `${data.data.offers.length} incoming ${data.data.offers.length === 1 ? 'offer' : 'offers'}` : 'No open offers.'}</p>
             {data.data.offers.map((offer) => (
-              <div key={offer.id} className="space-y-3 rounded-xl border border-slate-200 p-4">
+              <div key={offer.id} className="min-w-0 space-y-3 rounded-xl border border-emerald-200 bg-emerald-50/50 p-3 sm:p-4">
                 <h3 className="font-bold text-brand-navy">{offer.service} offer</h3>
                 <p className="text-sm text-slate-600">Expires at {time.format(new Date(offer.expires_at))}
                   {offer.estimated_distance_km !== null && ` · ${offer.estimated_distance_km} km estimated approach`}
@@ -111,20 +115,20 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
                 </div>
               </div>
             ))}
-            {data.data.jobs.length === 0 && <p className="text-sm text-slate-600">No active jobs.</p>}
+            {data.data.jobs.length === 0 && <p className="rounded-xl bg-slate-50 p-3 text-sm text-slate-600">No active jobs.</p>}
             {data.data.jobs.map((job) => {
               const step = jobSteps[job.request_status]
               const submitted = Boolean(job.booking_service_workflow?.submitted_at)
               const quote = readBookingQuote(job.booking_price_snapshots?.quote)
 
               return (
-                <div key={job.id} className="space-y-3 rounded-xl border border-slate-200 p-4">
+                <div key={job.id} className="min-w-0 space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4">
                   <h3 className="font-bold text-brand-navy">{job.service_categories?.name ?? 'Assigned roadside job'}</h3>
                   <StatusBadge status="active" label={job.request_status.replaceAll('_', ' ')} className="capitalize" />
                   <p className="break-words text-sm text-slate-600">{job.service_location}</p>
                   {job.issue_description && <p className="whitespace-pre-line break-words text-sm text-slate-600">{job.issue_description}</p>}
                   <a href={`https://www.google.com/maps/dir/?api=1&destination=${encodeURIComponent(`${job.latitude},${job.longitude}`)}`}
-                    target="_blank" rel="noreferrer" className="inline-flex text-sm font-semibold text-emerald-800 hover:underline">Open pickup directions</a>
+                    target="_blank" rel="noreferrer" className="inline-flex min-h-10 items-center gap-2 rounded-lg border border-slate-200 bg-white px-3 text-sm font-semibold text-emerald-800! hover:bg-emerald-50"><MapPin size={16} aria-hidden /> Open pickup directions</a>
                   <BookingChat requestId={job.id} viewer="technician" unread={unread.data?.[job.id] ?? 0} />
                   {step && <div><Button size="sm" disabled={change.isPending}
                     onClick={() => change.mutate({ type: 'advance', id: job.id, status: step.status })}>{step.label}</Button></div>}
@@ -139,7 +143,7 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
         )}
       </Card>
       {data.data && (data.data.completed.length > 0 || historyPage > 0) && (
-        <Card className="space-y-3">
+        <Card padding="sm" className="space-y-3 sm:p-5">
           <h2 className="text-xl font-bold text-brand-navy">Completed jobs</h2>
           {data.data.completed.map((job) => (
             <div key={job.id} className="space-y-2 rounded-xl border border-slate-200 p-3">
@@ -155,14 +159,14 @@ export default function TechnicianJobs({ technicianId }: { technicianId: string 
         </Card>
       )}
       {data.data && (
-        <Card className="space-y-3">
+        <Card padding="sm" className="space-y-3 sm:p-5">
           <h2 className="text-xl font-bold text-brand-navy">Performance</h2>
-          <dl className="grid gap-3 text-sm sm:grid-cols-3">
-            <div><dt>Completed jobs</dt><dd className="font-bold">{data.data.metrics.completed_jobs}</dd></div>
-            <div><dt>Average rating</dt><dd className="font-bold">
+          <dl className="grid gap-3 text-sm min-[480px]:grid-cols-2 2xl:grid-cols-3">
+            <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-3"><dt className="text-slate-600">Completed jobs</dt><dd className="mt-1 text-lg font-bold text-brand-navy">{data.data.metrics.completed_jobs}</dd></div>
+            <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-3"><dt className="text-slate-600">Average rating</dt><dd className="mt-1 text-lg font-bold text-brand-navy">
               {data.data.metrics.average_rating === null ? 'No ratings yet' : `${Number(data.data.metrics.average_rating).toFixed(1)} / 5 (${data.data.metrics.rated_jobs})`}
             </dd></div>
-            <div><dt>Simulated earnings</dt><dd className="font-bold">
+            <div className="min-w-0 rounded-xl bg-slate-50 px-3 py-3"><dt className="text-slate-600">Simulated earnings</dt><dd className="mt-1 text-lg font-bold text-brand-navy">
               {money.format(data.data.metrics.simulated_earnings ?? 0)}
             </dd></div>
           </dl>

@@ -1,7 +1,9 @@
 import { useEffect, useState } from 'react'
+import { ArrowRight, ClipboardList, Radio, ShieldCheck } from 'lucide-react'
 import { Link } from 'react-router-dom'
 import { QueryClient, QueryClientProvider, useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import roadsideCover from '../assets/technician-roadside.webp'
 import { useAuth } from '../auth/useAuth'
 import LiveConnection from '../components/common/LiveConnection'
 import { useDashboardRealtime } from '../lib/useDashboardRealtime'
@@ -127,8 +129,11 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
   }
 
   return (
-    <Card className="space-y-4">
-      <h2 className="text-xl font-bold text-brand-navy">Availability</h2>
+    <Card padding="sm" className="space-y-4 sm:p-5">
+      <h2 className="flex items-center gap-3 text-xl font-bold text-brand-navy">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-emerald-100 text-emerald-800"><Radio size={18} aria-hidden /></span>
+        Availability
+      </h2>
       {availability.isPending && <p role="status" className="text-sm text-slate-600">Loading availability…</p>}
       {availability.isError && (
         <Alert variant="error" title="Could not load your availability.">
@@ -137,21 +142,29 @@ function TechnicianAvailability({ technicianId }: { technicianId: string }) {
       )}
       {availability.isSuccess && (
         <>
-          <StatusBadge status={availability.data?.is_online ? 'available' : 'offline'}
-            label={availability.data?.is_online ? 'Online' : 'Offline'} />
-          <p className="text-sm text-slate-600">
-            {availability.data?.accepting_requests ? 'Accepting requests' : 'Incoming requests are paused'}
-            {' · '}
-            {availability.data?.location_sharing ? 'Location sharing on' : 'Location sharing off'}
-          </p>
-          <Button loading={save.isPending} onClick={() => {
+          <dl className="divide-y divide-slate-200 rounded-xl bg-slate-50 px-3 text-sm">
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <dt className="font-medium text-slate-700">Connection</dt>
+              <dd><StatusBadge status={availability.data?.is_online ? 'available' : 'offline'}
+                label={availability.data?.is_online ? 'Online' : 'Offline'} /></dd>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <dt className="font-medium text-slate-700">Incoming requests</dt>
+              <dd className="font-semibold text-brand-navy">{availability.data?.accepting_requests ? 'Accepting requests' : 'Paused'}</dd>
+            </div>
+            <div className="flex flex-wrap items-center justify-between gap-2 py-2.5">
+              <dt className="font-medium text-slate-700">Location sharing</dt>
+              <dd className="font-semibold text-brand-navy">{availability.data?.location_sharing ? 'On' : 'Off'}</dd>
+            </div>
+          </dl>
+          <Button fullWidth loading={save.isPending} onClick={() => {
             if (!save.isPending) changeAvailability(availability.data?.is_online ? 'offline' : 'online')
           }}>
             {availability.data?.is_online ? 'Go offline' : 'Go online'}
           </Button>
           {availability.data?.is_online && (
-            <div className="space-y-2">
-              <p className="text-sm text-slate-600">Assigned customers and admins can see your shared location during active work. Updates run while this tab is visible. The last position expires after ten minutes.</p>
+            <div className="space-y-3 rounded-xl border border-slate-200 p-3">
+              <p className="text-sm leading-6 text-slate-600">Assigned customers and admins can see your shared location during active work. Updates run while this tab is visible. The last position expires after ten minutes.</p>
               <div className="flex flex-wrap gap-2">
                 <Button variant="outline" size="sm" disabled={save.isPending} onClick={() => changeAvailability('share')}>
                   {canTrack ? 'Refresh shared location' : 'Start live location sharing'}
@@ -196,9 +209,11 @@ function TechnicianWorkspace({ applicationOnly }: { applicationOnly: boolean }) 
   const canManageWorkspace = status === 'approved' && profile?.role === 'technician'
 
   const applicationCard = (
-    <Card id="application-status" className="scroll-mt-5 space-y-4">
+    <Card id="application-status" padding="sm" className="scroll-mt-5 space-y-4 sm:p-5">
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <h2 className="text-xl font-bold text-brand-navy">Application status</h2>
+        <h2 className="flex items-center gap-2 text-xl font-bold text-brand-navy">
+          <ShieldCheck size={20} className="shrink-0 text-emerald-700" aria-hidden /> Application status
+        </h2>
         <Button size="sm" variant="outline" loading={application.isFetching} onClick={() => void application.refetch()}>Refresh status</Button>
       </div>
       {application.isPending && <p role="status" className="text-sm text-slate-600">Loading application status…</p>}
@@ -227,6 +242,18 @@ function TechnicianWorkspace({ applicationOnly }: { applicationOnly: boolean }) 
   return (
     <DashboardLayout
       title={applicationOnly ? 'Technician application' : 'Technician Dashboard'}
+      coverImage={applicationOnly ? undefined : roadsideCover}
+      description={applicationOnly ? 'Review your technician approval and next steps.' : 'Manage roadside jobs, availability and service rates.'}
+      actions={!applicationOnly && canManageWorkspace && (
+        <div className="mt-5 flex flex-wrap gap-2.5">
+          <a href="#technician-jobs" className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-brand-green px-4 text-sm font-bold text-brand-navy! hover:bg-emerald-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            <ClipboardList size={17} aria-hidden /> View jobs <ArrowRight size={16} aria-hidden />
+          </a>
+          <a href="#availability" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/50 bg-brand-navy/70 px-4 text-sm font-semibold text-white hover:bg-brand-navy focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            <Radio size={17} aria-hidden /> Set availability
+          </a>
+        </div>
+      )}
       status={!applicationOnly && <LiveConnection status={connection} />}
       sections={!applicationOnly && canManageWorkspace
         ? [['technician-jobs', 'Offers and jobs'], ['availability', 'Availability'], ['service-rates', 'Services and rates'], ['application-status', 'Application status']]

@@ -1,6 +1,7 @@
 import { useId, useState, type SubmitEvent } from 'react'
 import { useMutation, useQuery, useQueryClient } from '@tanstack/react-query'
 
+import { SlidersHorizontal } from 'lucide-react'
 import type { Database } from '../../lib/database.types'
 import { supabase } from '../../lib/supabase'
 import Alert from '../ui/Alert'
@@ -67,7 +68,7 @@ function ServiceEditor({ caption, categoryId, service, technicianId }: {
   }
 
   return (
-    <form aria-label={caption} className="space-y-3 rounded-xl border border-slate-200 p-4" onSubmit={submit}
+    <form aria-label={caption} className="@container space-y-4 rounded-xl border border-slate-200 bg-slate-50 p-3 sm:p-4" onSubmit={submit}
       onChange={() => {
         setInvalid(false)
         if (save.isSuccess || save.isError) save.reset()
@@ -77,21 +78,24 @@ function ServiceEditor({ caption, categoryId, service, technicianId }: {
         <StatusBadge status={service?.is_active ? 'available' : 'offline'}
           label={service?.is_active ? 'Listed' : 'Not listed'} />
       </div>
-      <label className="flex items-center gap-2 text-sm font-medium text-slate-700">
+      <label className="flex min-h-11 items-center gap-3 rounded-lg border border-slate-200 bg-white px-3 text-sm font-medium text-slate-700">
         <input name="listed" type="checkbox" defaultChecked={service?.is_active ?? false}
-          disabled={save.isPending} className="accent-emerald-700" />
+          disabled={save.isPending} className="size-4 shrink-0 accent-emerald-700" />
         Offer this service
       </label>
-      <div className="grid gap-3 sm:grid-cols-3">
-        {rateFields.map(([field, label]) => (
-          <Input key={field} id={`${id}-${field}`} name={field} label={label}
-            type="number" min="0" step="0.01" required disabled={save.isPending} defaultValue={service?.[field] ?? 0} />
-        ))}
-      </div>
+      <fieldset className="min-w-0">
+        <legend className="mb-2 text-sm font-semibold text-brand-navy">Pricing in INR</legend>
+        <div className="grid gap-3 @lg:grid-cols-3">
+          {rateFields.map(([field, label]) => (
+            <Input key={field} id={`${id}-${field}`} name={field} label={label}
+              type="number" min="0" step="0.01" required disabled={save.isPending} defaultValue={service?.[field] ?? 0} />
+          ))}
+        </div>
+      </fieldset>
       {invalid && <Alert variant="error" title="Enter non-negative rates with up to two decimal places." />}
       {save.isError && <Alert variant="error" title="Could not save these rates. Please try again." />}
       {save.isSuccess && <Alert variant="success" title="Service rates saved." />}
-      <Button type="submit" size="sm" variant="outline" loading={save.isPending}>Save service</Button>
+      <Button type="submit" className="w-full @sm:w-auto" loading={save.isPending}>Save service</Button>
     </form>
   )
 }
@@ -117,8 +121,11 @@ export default function TechnicianServices({ technicianId }: { technicianId: str
   })
 
   return (
-    <Card className="space-y-4">
-      <h2 className="text-xl font-bold text-brand-navy">Services and rates</h2>
+    <Card padding="sm" className="space-y-4 sm:p-5">
+      <h2 className="flex items-center gap-3 text-xl font-bold text-brand-navy">
+        <span className="grid size-9 shrink-0 place-items-center rounded-lg bg-sky-100 text-sky-800"><SlidersHorizontal size={18} aria-hidden /></span>
+        Services and rates
+      </h2>
       <p className="text-sm text-slate-600">List the services you offer and set their rates in INR.</p>
       {(categories.isPending || services.isPending) && <p role="status" className="text-sm text-slate-600">Loading services…</p>}
       {(categories.isError || services.isError) && (
