@@ -4,6 +4,7 @@ import RoleProtectedRoute from '../components/auth/RoleProtectedRoute'
 import ProtectedRoute from '../components/auth/ProtectedRoute'
 
 import AboutPage from '../pages/AboutPage'
+import AdminDashboardPage from '../pages/AdminDashboardPage'
 import ContactPage from '../pages/ContactPage'
 import CustomerDashboardPage from '../pages/CustomerDashboardPage'
 import DashboardEntryPage from '../pages/DashboardEntryPage'
@@ -84,7 +85,7 @@ const router = createBrowserRouter([
     path: '/admin/dashboard',
     element: (
       <RoleProtectedRoute allowedRole="admin">
-        <DashboardEntryPage />
+        <AdminDashboardPage />
       </RoleProtectedRoute>
     ),
   },

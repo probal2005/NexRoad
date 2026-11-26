@@ -1,14 +1,20 @@
 begin;
 
-create policy "Technicians read categories for assigned jobs"
-  on public.service_categories for select to authenticated using (
-    exists (
-      select 1 from public.service_requests r
-      where r.category_id = service_categories.id
-        and r.assigned_technician_id = (select auth.uid())
-        and r.request_status in ('accepted', 'technician_arriving', 'in_progress')
-    ) and (select nexroad_private.is_approved_technician(auth.uid()))
+create function nexroad_private.can_read_assigned_category(p_category_id uuid)
+returns boolean language sql stable security definer set search_path = ''
+as $$
+  select nexroad_private.is_approved_technician(auth.uid()) and exists (
+    select 1 from public.service_requests r
+    where r.category_id = p_category_id and r.assigned_technician_id = auth.uid()
+      and r.request_status in ('accepted', 'technician_arriving', 'in_progress')
   );
+$$;
+revoke all on function nexroad_private.can_read_assigned_category(uuid) from public, anon, authenticated;
+grant execute on function nexroad_private.can_read_assigned_category(uuid) to authenticated;
+
+create policy "Technicians read categories for assigned jobs"
+  on public.service_categories for select to authenticated
+  using (nexroad_private.can_read_assigned_category(id));
 
 create function nexroad_private.decline_technician_offer(p_offer_id uuid)
 returns boolean

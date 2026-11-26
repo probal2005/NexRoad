@@ -3,6 +3,7 @@ import { useMutation, useQuery } from '@tanstack/react-query'
 import { Bell, ClipboardList } from 'lucide-react'
 
 import { supabase } from '../../lib/supabase'
+import CustomerComplaintForm from './CustomerComplaintForm'
 import CustomerRequestFeedback from './CustomerRequestFeedback'
 import Alert from '../ui/Alert'
 import Button from '../ui/Button'
@@ -145,6 +146,7 @@ export default function CustomerRequests({ customerId, categories }: {
                   )}
                   {['accepted', 'technician_arriving', 'in_progress', 'completed'].includes(request.request_status)
                     && <CustomerRequestFeedback requestId={request.id} completed={request.request_status === 'completed'} />}
+                  <CustomerComplaintForm requestId={request.id} />
                 </li>
               ))}
             </ul>

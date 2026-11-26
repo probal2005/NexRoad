@@ -13,7 +13,8 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 | 5.10 | The React client uses database types derived from the review schema. Profile operations are typed and role values are validated before routes render. Live integration verification is pending. |
 | 6 | Customer dashboard implemented and tested locally. The production snapshot has the initial dashboard. Local additions cover vehicle editing and removal, map pickup, active request details and history, pre-acceptance cancellation, customer settings, service-specific inputs, indicative rates and confirmation, request updates, technician names and completed-request feedback. Hosted migration approval and live verification remain pending. |
 | 7 | Technician dashboard implemented locally, including approval status, availability, service rates, opt-in one-time location sharing, offer responses, job progress and directions, mechanical outcomes, ratings and simulated earnings. Offer generation belongs to Phase 9. Hosted workflow depends on approved migrations. |
-| 8–15 | Pending. |
+| 8 | Admin Dashboard implemented. Includes application review, app suspension/reactivation, category and rate defaults, booking and simulated payment monitoring, a consent-based technician map, complaint handling, analytics, audit history and platform settings. Hosted verification requires approved migrations. |
+| 9–15 | Pending. |
 
 ## Verification
 
@@ -29,6 +30,7 @@ Reviewed 26 November 2026. Scope ends at Phase 5. Work continued from the upload
 - Phase 7 browser checks with simulated Supabase responses passed for an applicant viewing pending status without availability controls and an approved technician toggling online and offline.
 - Phase 7 rate setup passed Chromium tests with simulated Supabase responses for viewing, listing and unlisting services, failed-save retry and reload. Disposable PostgreSQL verified that approved technicians can update their own rates and that cross-account and customer writes are rejected.
 - Phase 7 workflow passed Chromium checks with simulated Supabase responses for GPS consent, rate setup, offer responses, navigation, mechanical completion and earnings display. Disposable PostgreSQL verified ownership and role checks, location bounds, offer decline, transition ordering, mechanical outcomes and private performance totals.
+- Phase 8 fresh PostgreSQL replay applied all five migrations and verified customer request creation, approval role changes, non-admin denial, suspension and reactivation, complaint ownership and resolution, pricing and settings changes, and the audit trail. Chromium verified the admin and suspension workflows using simulated Supabase responses.
 - Remote migrations were not applied, and post-migration live tests and advisors were not run.
 
 ## Next steps

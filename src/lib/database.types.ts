@@ -445,6 +445,16 @@ export type Database = {
       }
     }
     Functions: {
+      account_access_allowed: { Args: Record<never, never>; Returns: boolean }
+      admin_overview: { Args: Record<never, never>; Returns: Json }
+      admin_update: {
+        Args: { p_action: string; p_target: string | null; p_values: Json }
+        Returns: boolean
+      }
+      submit_customer_complaint: {
+        Args: { p_request_id: string; p_message: string }
+        Returns: boolean
+      }
       decline_technician_offer: {
         Args: { p_offer_id: string }
         Returns: boolean

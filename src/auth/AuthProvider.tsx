@@ -20,6 +20,7 @@ interface ProfileResult {
   userId: string
   profile: UserProfile | null
   loading: boolean
+  suspended?: boolean
 }
 
 export function AuthProvider({ children }: AuthProviderProps) {
@@ -54,6 +55,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
     setProfileResult({ userId, profile: null, loading: true })
 
     let profile: UserProfile | null = null
+    let suspended = false
 
     try {
       const { data, error } = await supabase
@@ -68,6 +70,10 @@ export function AuthProvider({ children }: AuthProviderProps) {
       if (data) {
         const { role } = data
         if (role === 'user' || role === 'technician' || role === 'admin') {
+          const access = await supabase.rpc('account_access_allowed').abortSignal(controller.signal)
+          // Existing deployments can authenticate while the admin migration is awaiting review.
+          if (access.error && access.error.code !== 'PGRST202') throw access.error
+          suspended = access.data === false
           profile = { ...data, role }
         }
       }
@@ -77,7 +83,7 @@ export function AuthProvider({ children }: AuthProviderProps) {
       }
     } finally {
       if (!controller.signal.aborted) {
-        setProfileResult({ userId, profile, loading: false })
+        setProfileResult({ userId, profile, loading: false, suspended })
       }
     }
   }, [userId])
@@ -105,6 +111,8 @@ export function AuthProvider({ children }: AuthProviderProps) {
   const profileLoading = userId !== null
     && (profileResult?.userId !== userId || profileResult.loading)
 
+  const suspended = userId !== null && profileResult?.userId === userId && profileResult.suspended === true
+
   const value = useMemo(
     () => ({
       session,
@@ -113,10 +121,11 @@ export function AuthProvider({ children }: AuthProviderProps) {
       role: currentProfile?.role ?? null,
       loading,
       profileLoading,
+      suspended,
       refreshProfile,
       signOut,
     }),
-    [session, currentProfile, loading, profileLoading, refreshProfile, signOut],
+    [session, currentProfile, loading, profileLoading, suspended, refreshProfile, signOut],
   )
 
   return <AuthContext.Provider value={value}>{children}</AuthContext.Provider>

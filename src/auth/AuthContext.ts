@@ -20,6 +20,7 @@ export interface AuthContextValue {
   role: UserRole | null
   loading: boolean
   profileLoading: boolean
+  suspended: boolean
   refreshProfile: () => Promise<void>
   signOut: () => Promise<void>
 }
