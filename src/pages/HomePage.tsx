@@ -127,7 +127,7 @@ function App() {
                 </div>
 
                 <img
-                  src="/logo/nexroad-mark.svg"
+                  src="/logo/nexroad-road-pin.webp"
                   alt="NexRoad"
                   className="h-14 w-14"
                 />

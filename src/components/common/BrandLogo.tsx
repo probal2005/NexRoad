@@ -22,7 +22,7 @@ export default function BrandLogo({
   dark = false,
   href = '/',
   className = '',
-  onClick
+  onClick,
 }: BrandLogoProps) {
   return (
     <Link
@@ -30,14 +30,14 @@ export default function BrandLogo({
       onClick={onClick}
       aria-label="NexRoad home"
       className={[
-        'inline-flex items-center gap-3',
+        'inline-flex items-center gap-2.5',
         className,
       ].filter(Boolean).join(' ')}
     >
       <img
-        src="/logo/nexroad-mark.svg"
+        src="/logo/nexroad-road-pin.webp"
         alt=""
-        className={logoSizes[size]}
+        className={`${logoSizes[size]} shrink-0`}
       />
 
       <div>
@@ -57,7 +57,7 @@ export default function BrandLogo({
               dark ? 'text-slate-400' : 'text-slate-500',
             ].join(' ')}
           >
-            DRIVE SAFE · GET HELP · GO FURTHER
+            ROADSIDE ASSISTANCE
           </span>
         )}
       </div>
