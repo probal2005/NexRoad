@@ -1,6 +1,6 @@
 # NexRoad project progress
 
-Phase 14 reviewed 26 November 2026. The Phase 5 review below records the initial audit. Work continued from the uploaded NexRoad source at GitHub commit `5dd7183`. The connected checkout is separate from the original VS Code workspace.
+Phase 15 reviewed 26 November 2026. The Phase 5 review below records the initial audit. Work continued from the uploaded NexRoad source at GitHub commit `5dd7183`. The connected checkout is separate from the original VS Code workspace.
 
 | Step | Status |
 | --- | --- |
@@ -20,7 +20,7 @@ Phase 14 reviewed 26 November 2026. The Phase 5 review below records the initial
 | 12 | Private Supabase Realtime subscriptions, booking and offer updates, consent-based location, admin monitoring, reconnect recovery and polling fallback implemented. |
 | 13 | Simulated cash and online checkout, failure and retry, payment history and text receipts, participant-only realtime chat, unread counts and paid earnings implemented. |
 | 14 | Testing, security and optimization implemented. See the verification summary below. |
-| 15 | Pending. |
+| 15 | Release documentation, role guides, architecture diagrams and reusable smoke checks implemented. See Phase 15 verification below. |
 
 ## Verification
 
@@ -86,3 +86,13 @@ PostgreSQL checks verified role access, sender roles, retries, unread tracking, 
 - Local lint, TypeScript, production build, five unit checks and nine Chromium scenarios passed. The scenarios cover all three sign-in roles with fixtures, mobile layout and metadata, login accessibility, admin keyboard navigation, demo isolation, realtime reconnect, chat and payment retry. The npm dependency audit reported zero vulnerabilities.
 - Vercel production deployment `dpl_HxrjcpMHyBLyADx8DHjxmxPrBHEv` is ready and serves `https://nexroad.vercel.app`. The live homepage script and its two module preloads total approximately 166 KB when gzipped. Production HTTP checks confirmed the security headers, private-route indexing headers, immutable JavaScript caching, robots file and public sitemap.
 - All nine Chromium scenarios passed against the Vercel production frontend using simulated Supabase responses. The realtime cleanup assertion waits for the leave event after lazy navigation. The live Supabase rollback test covers the backend separately.
+
+
+## Phase 15 verification
+
+- GitHub repository configuration verified. The default branch is `main` and the website link targets NexRoad production.
+- Added the project README, migration and deployment runbook, architecture and database diagrams, and customer, technician, administrator and demo guides.
+- Lint, TypeScript, the production build, five unit tests, dependency audit and disposable PostgreSQL migration replay passed. npm audit reported zero vulnerabilities.
+- Hosted matching Cron is active and its latest observed run succeeded. A production database check created synthetic identities within a transaction, verified the signup trigger, checked role-scoped quote through payment and chat, and rolled back all fixture rows. All 16 public NexRoad tables have RLS enabled.
+- A fresh hosted installation still requires a reviewed schema-only baseline. Hosted Auth API sign-in and session issuance for dedicated accounts are separate from the production database check and fixture browser tests.
+- The live Auth settings endpoint reports email authentication and signup enabled, with automatic email confirmation disabled. The Phase 15 migration adds catalog documentation to four existing database functions.

@@ -1,44 +1,34 @@
-# React + TypeScript + Vite
+# NexRoad
 
-This template provides a minimal setup to get React working in Vite with HMR and some Oxlint rules.
+NexRoad is a roadside-assistance simulation for Chandigarh. It models fuel delivery, mechanical assistance and towing, from a customer request through technician matching, service completion, chat and simulated payment. The production login page offers password-free previews for customer, technician and admin roles. [Open NexRoad](https://nexroad.vercel.app)
 
-Currently, two official plugins are available:
+## Development setup
 
-- [@vitejs/plugin-react](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react) uses [Oxc](https://oxc.rs)
-- [@vitejs/plugin-react-swc](https://github.com/vitejs/vite-plugin-react/blob/main/packages/plugin-react-swc) uses [SWC](https://swc.rs/)
+Use Node.js 24 and npm. Docker is required for the disposable database tests.
 
-## React Compiler
-
-The React Compiler is not enabled on this template because of its impact on dev & build performances. To add it, see [this documentation](https://react.dev/learn/react-compiler/installation).
-
-## Expanding the Oxlint configuration
-
-If you are developing a production application, we recommend enabling type-aware lint rules by installing `oxlint-tsgolint` and editing `.oxlintrc.json`:
-
-```json
-{
-  "$schema": "./node_modules/oxlint/configuration_schema.json",
-  "plugins": ["react", "typescript", "oxc"],
-  "options": {
-    "typeAware": true
-  },
-  "rules": {
-    "react/rules-of-hooks": "error",
-    "react/only-export-components": ["warn", { "allowConstantExport": true }]
-  }
-}
+```sh
+npm ci
+cp .env.example .env.local
 ```
 
-See the [Oxlint rules documentation](https://oxc.rs/docs/guide/usage/linter/rules) for the full list of rules and categories.
+Set `VITE_SUPABASE_URL` and `VITE_SUPABASE_PUBLISHABLE_KEY` in `.env.local` using an existing NexRoad-compatible Supabase project. Use a publishable key or legacy anon key. Vite embeds these values in the browser bundle. Keep service-role keys, database passwords and production login credentials out of client environment variables.
 
-## Local demo login
-
-Create dedicated demo users in your local Supabase Auth instance with the emails shown on the login page. Use their local test passwords in the ignored `.env.development.local` file.
-
-```dotenv
-VITE_LOCAL_DEMO_CUSTOMER_PASSWORD=
-VITE_LOCAL_DEMO_TECHNICIAN_PASSWORD=
-VITE_LOCAL_DEMO_ADMIN_PASSWORD=
+```sh
+npm run dev
 ```
 
-Restart Vite and open the app on localhost. When the app and Supabase both use loopback URLs, a configured demo button fills and displays that account's password. Use the eye button to hide it again. The public app offers password-free role previews with sample data. Keep production credentials out of all `VITE_*` variables.
+The migrations extend an existing NexRoad schema. See the operations guide for the hosted migration history and fresh-project limitations. The fixture suite works without a hosted database or account.
+
+## Roles
+
+- **Customer** manages vehicles, reviews a server-calculated INR quote, requests assistance and follows the assigned service through chat, completion, checkout and receipt.
+- **Technician** applies for approval and, once approved, manages availability, optionally shares location, responds to offers and submits service reports.
+- **Admin** reviews applications, manages rates and platform settings, and monitors bookings, complaints and audit history.
+
+## Verification and operations
+
+- [Release and operations guide](docs/operations.md)
+- [Automated test commands](tests/README.md)
+- [Project progress](PROJECT_PROGRESS.md)
+- [Architecture and database](docs/architecture.md)
+- [Customer, technician, admin and demo guide](docs/user-guide.md)

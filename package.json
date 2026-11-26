@@ -10,7 +10,8 @@
     "preview": "vite preview",
     "test:unit": "node --test tests/unit/*.test.mjs",
     "test:browser": "playwright test",
-    "test:db": "bash tests/database/run.sh"
+    "test:db": "bash tests/database/run.sh",
+    "smoke:production": "node --use-env-proxy tests/smoke-production.mjs"
   },
   "dependencies": {
     "@hookform/resolvers": "^7.0.7",

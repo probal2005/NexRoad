@@ -4,10 +4,9 @@ NexRoad is a roadside-assistance simulation for Chandigarh. Continue the existin
 
 ## Current baseline
 
-- Phases 1–3 were previously verified.
-- Phase 4 role flows passed with simulated Supabase responses. Live customer, approved technician and admin sign-in still need dedicated test accounts.
-- Phase 5 has a reviewed migration and typed client. The migration passed disposable PostgreSQL tests and awaits approval for hosted application.
-- Phase 6 has a deployed customer dashboard with vehicle creation, assistance requests and recent request status. The remaining scope is listed below. [Production](https://nexroad.vercel.app)
+- Phases 1–14 are implemented, and the hosted migration ledger includes the Phase 5–14 migrations.
+- Phase 15 covers production deployment, database operations and user documentation. Dedicated live account sign-in remains a separate verification item because browser role tests use fixtures.
+- See [project progress](PROJECT_PROGRESS.md) for live verification and remaining checks.
 
 ## Implementation order
 
@@ -26,7 +25,7 @@ NexRoad is a roadside-assistance simulation for Chandigarh. Continue the existin
 | 14. Testing and optimization | Run role scenarios, concurrency and policy tests, accessibility checks and mobile performance review. | Record test results and resolve release-blocking failures. |
 | 15. Deployment and documentation | Document setup, environment variables, migration and operations. Release approved changes and smoke-test production. | Production routes, authorization and core workflows are verified. |
 
-## Current work
+## Customer dashboard milestones
 
 - [x] Add owner-scoped vehicle editing and confirmed removal.
 - [x] Add a Chandigarh pickup map with GPS and manual coordinate alternatives.
@@ -36,6 +35,6 @@ NexRoad is a roadside-assistance simulation for Chandigarh. Continue the existin
 - [x] Add an indicative listed starting rate, request review and confirmation, assigned technician name, completed-request feedback and a refreshable activity feed.
 - [x] Replace the indicative estimate with persisted server-verified quotes in Phase 10.
 - [x] Add live request and offer notifications in Phase 12.
-- [ ] Run live customer verification after approval and application of the review migrations.
+- [ ] Exercise the complete browser workflow with a dedicated live customer account.
 
 Keep development in the existing source checkout. Review hosted migrations before application. GitHub pushes and Vercel releases require authorization for the changes being released.
